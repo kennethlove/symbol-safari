@@ -1,0 +1,1360 @@
+
+<!doctype html>
+<html lang="en">
+<head><script data-od-sandbox-shim>(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+})();</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Symbol Finder</title>
+<style>
+:root {
+  --bg:        oklch(12% 0.004 250);
+  --surface:   oklch(17% 0.006 250);
+  --fg:        oklch(94% 0.002 250);
+  --muted:     oklch(48% 0.008 250);
+  --border:    oklch(24% 0.006 250);
+  --accent:    oklch(68% 0.2 260);
+  --accent-dim: oklch(68% 0.2 260 / 0.15);
+  --accent-glow: oklch(68% 0.2 260 / 0.35);
+  --found:     oklch(65% 0.18 145);
+  --found-bg:  oklch(65% 0.18 145 / 0.08);
+  --wrong:     oklch(60% 0.22 25);
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+#app { width: 100%; height: 100%; position: relative; overflow: hidden; }
+
+.screen { display: flex; }
+.screen.hidden { display: none; }
+
+/* ─── Start Screen ─── */
+#start-screen {
+  flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 20px;
+  position: relative;
+}
+
+#start-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 20%, oklch(68% 0.2 260 / 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 80%, oklch(65% 0.18 145 / 0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+#bg-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  opacity: 0.25;
+}
+
+.content-wrap {
+  position: relative;
+  z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+
+#start-screen h1 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--fg) 35%, var(--accent) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+#start-screen .subtitle {
+  font-size: 15px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.mode-group {
+  display: flex;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.mode-btn {
+  padding: 8px 24px;
+  border: none; border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mode-btn:hover { color: var(--fg); }
+.mode-btn.selected {
+  background: var(--bg);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.primary-btn {
+  padding: 10px 40px;
+  border: none; border-radius: 8px;
+  background: var(--accent);
+  color: oklch(99% 0 0);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  letter-spacing: -0.01em;
+}
+
+.primary-btn:hover { opacity: 0.85; transform: scale(1.03); }
+.primary-btn:active { transform: scale(0.97); }
+
+.player-inputs { display: flex; gap: 14px; width: 100%; max-width: 360px; }
+
+.input-group {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  flex: 1;
+}
+
+.input-group label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted);
+}
+
+.input-group input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.input-group input:focus { border-color: var(--accent); }
+
+.input-group input[type="number"] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  width: 100px;
+  text-align: center;
+}
+
+#p2-input-group { transition: opacity 0.15s; }
+
+/* ─── Game Screen ─── */
+#game-screen {
+  width: 100%; height: 100%;
+  position: relative;
+}
+
+#play-field {
+  position: absolute;
+  top: 90px; bottom: 48px; left: 12px; right: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#game-canvas, #fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+}
+
+#game-canvas { cursor: pointer; z-index: 1; }
+#fx-canvas { pointer-events: none; z-index: 2; }
+
+/* ─── HUD ─── */
+#hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 5;
+  display: flex; align-items: flex-start;
+  padding: 14px 24px;
+  pointer-events: none;
+}
+
+.hud-section { flex: 1; }
+.hud-center { text-align: center; }
+.hud-right { text-align: right; }
+
+#timer-block {
+  display: flex; align-items: center; gap: 10px;
+}
+#timer-ring-svg { flex-shrink: 0; }
+#shared-timer {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: color 0.3s;
+}
+
+#shared-timer.urgent { color: var(--wrong); animation: timerShake 0.3s ease-in-out infinite; }
+
+@keyframes timerShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+#player-badge {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 12px;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  line-height: 1.5;
+  transition: border-color 0.3s, color 0.3s;
+}
+
+#player-badge.is-p1 { border-color: var(--accent); color: var(--accent); }
+#player-badge.is-p2 { border-color: var(--found); color: var(--found); }
+
+#hud-skip-btn {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 12px;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+  pointer-events: auto;
+  line-height: 1.5;
+  transition: all 0.12s;
+}
+#hud-skip-btn:hover { border-color: var(--wrong); color: var(--wrong); }
+
+#target-block {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1px;
+}
+
+#target-block .t-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+#target-number {
+  font-family: var(--font-mono);
+  font-size: 60px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  transition: color 0.2s, transform 0.15s;
+}
+
+#target-number.pop { transform: scale(1.15); }
+
+#personal-timer {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  line-height: 1;
+}
+
+#turn-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+
+#timer-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; z-index: 10;
+}
+
+#timer-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 100%;
+  transition: width 0.3s linear;
+}
+
+#timer-bar-fill.urgent { background: var(--wrong); }
+
+#bottom-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  z-index: 5;
+  display: flex; justify-content: center; gap: 40px;
+  padding: 10px 24px 16px;
+  pointer-events: none;
+}
+
+.b-stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.b-stat .bs-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.b-stat .bs-value {
+  font-family: var(--font-mono); font-size: 16px; font-weight: 600;
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.b-stat .bs-value.found-col { color: var(--found); }
+
+/* ─── Turn overlay ─── */
+
+/* ─── Turn overlay ─── */
+#turn-overlay {
+  position: absolute; inset: 0;
+  z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+#turn-overlay.active { pointer-events: auto; opacity: 1; }
+
+#turn-overlay .to-bg {
+  position: absolute; inset: 0;
+  background: color-mix(in srgb, var(--bg) 93%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+#turn-overlay .to-content {
+  position: relative;
+  text-align: center;
+  transform: translateY(20px);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s;
+  opacity: 0;
+}
+
+#turn-overlay.active .to-content {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+#turn-overlay .to-player { font-family: var(--font-display); font-size: 26px; font-weight: 600; }
+#turn-overlay .to-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+#to-preview-num {
+  font-family: var(--font-mono);
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin-top: 8px;
+  display: none;
+}
+#to-preview-num.show { display: block; animation: numDrop 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+@keyframes numDrop {
+  0% { transform: translateY(-30px) scale(0.6); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* ─── Results Screen ─── */
+#results-screen {
+  flex-direction: column; align-items: center;
+  justify-content: center; height: 100%; gap: 16px;
+}
+
+#results-screen h2 {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+#results-screen .r-sub { font-size: 15px; color: var(--muted); }
+
+#result-bars {
+  display: flex; gap: 24px; width: 100%; max-width: 400px;
+  align-items: flex-end;
+  margin: 8px 0;
+}
+
+.rb-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rb-label { font-family: var(--font-display); font-size: 14px; font-weight: 600; }
+.rb-track {
+  width: 100%; height: 80px;
+  background: var(--border); border-radius: 4px;
+  position: relative; overflow: hidden;
+}
+.rb-fill {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  border-radius: 4px;
+  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rb-fill.p1 { background: var(--accent); }
+.rb-fill.p2 { background: var(--found); }
+.rb-val { font-family: var(--font-mono); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+#results-grid { display: flex; gap: 16px; }
+
+.r-card {
+  min-width: 180px;
+  padding: 14px 22px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.r-card.winner { border-color: var(--accent); background: var(--accent-dim); }
+.r-card .rc-name { font-family: var(--font-display); font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.r-card .rc-stat { font-family: var(--font-mono); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.r-card .rc-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.r-card .rc-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+@media (max-width: 700px) {
+  #hud { padding: 10px 14px; }
+  #target-number { font-size: 42px; }
+  #shared-timer { font-size: 22px; }
+  #bottom-bar { gap: 20px; }
+  #timer-ring-svg { width: 32px; height: 32px; }
+  #results-grid { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="start-screen" class="screen">
+  <canvas id="bg-canvas"></canvas>
+  <div class="content-wrap">
+    <h1>Symbol Finder</h1>
+    <p class="subtitle">Find the target before the clock runs out</p>
+    <div class="mode-group">
+      <button class="mode-btn selected" data-mode="solo">Solo</button>
+      <button class="mode-btn" data-mode="pvp">1 vs 1</button>
+    </div>
+    <div class="player-inputs">
+      <div class="input-group">
+        <label>Player 1</label>
+        <input type="text" id="p1-name" value="Player 1" maxlength="20">
+      </div>
+      <div class="input-group" id="p2-input-group" style="display:none">
+        <label>Player 2</label>
+        <input type="text" id="p2-name" value="Player 2" maxlength="20">
+      </div>
+    </div>
+    <div class="input-group" style="align-items:center">
+      <label>Time limit (seconds)</label>
+      <input type="number" id="time-limit" value="60" min="5" max="600" step="5">
+    </div>
+    <button class="primary-btn" id="start-btn">Start</button>
+  </div>
+</div>
+
+<div id="game-screen" class="screen hidden">
+  <div id="timer-bar"><div id="timer-bar-fill"></div></div>
+  <div id="play-field">
+    <canvas id="game-canvas"></canvas>
+    <canvas id="fx-canvas"></canvas>
+  </div>
+
+  <div id="hud">
+    <div class="hud-section">
+      <div id="timer-block">
+        <svg id="timer-ring-svg" width="44" height="44" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="19" fill="none" stroke="var(--border)" stroke-width="2.5"/>
+          <circle id="timer-ring-fill" cx="22" cy="22" r="19" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <div id="shared-timer">60</div>
+      </div>
+    </div>
+    <div class="hud-section hud-center">
+      <div id="target-block">
+        <span class="t-label">Find</span>
+        <div id="target-number">—</div>
+        <div id="personal-timer">0.0s</div>
+      </div>
+    </div>
+    <div class="hud-section hud-right">
+      <div class="t-label">Turn</div>
+      <div>
+        <span id="player-badge" class="is-p1">Player 1</span>
+        <button id="hud-skip-btn" style="display:none">Skip (+3s)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom-bar">
+    <div class="b-stat"><span class="bs-label">Found</span><span class="bs-value found-col" id="found-count">0/—</span></div>
+    <div class="b-stat"><span class="bs-label">Best</span><span class="bs-value" id="best-time">—</span></div>
+    <div class="b-stat"><span class="bs-label">Last</span><span class="bs-value" id="last-time">—</span></div>
+  </div>
+
+  <div id="turn-overlay">
+    <div class="to-bg"></div>
+    <div class="to-content">
+      <div class="to-player" id="to-player-text">Player 1</div>
+      <div class="to-sub" id="to-sub-text">Find the number</div>
+      <div class="to-num" id="to-preview-num"></div>
+      <button class="primary-btn" id="go-btn" style="margin-top:16px;display:none">Go</button>
+    </div>
+  </div>
+</div>
+
+<div id="results-screen" class="screen hidden">
+  <h2 id="winner-text">Time's Up!</h2>
+  <p class="r-sub" id="winner-sub"></p>
+  <div id="result-bars"></div>
+  <div id="results-grid"></div>
+  <button class="primary-btn" id="play-again-btn">Play Again</button>
+</div>
+
+</div>
+
+<script>
+(function() {
+'use strict';
+
+const NUM_MIN = 10, NUM_MAX = 99;
+let gameDuration = 60;
+const SKIP_PEN = 3;
+
+const $ = id => document.getElementById(id);
+
+function cv(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+}
+const ACCENT = cv('accent');
+const FOUND = cv('found');
+const WRONG = cv('wrong');
+const FONT_MONO = cv('font-mono');
+
+// ── DOM ──
+const startScreen   = $('start-screen');
+const bgCanvas      = $('bg-canvas');
+const bgCtx         = bgCanvas.getContext('2d');
+const gameScreen    = $('game-screen');
+const resultsScreen = $('results-screen');
+const canvas        = $('game-canvas');
+const ctx           = canvas.getContext('2d');
+const fxCanvas      = $('fx-canvas');
+const fxCtx         = fxCanvas.getContext('2d');
+const startBtn      = $('start-btn');
+const sharedTimerEl = $('shared-timer');
+const timerBarFill  = $('timer-bar-fill');
+const timerRingFill = $('timer-ring-fill');
+const targetNumEl   = $('target-number');
+const personalTimerEl = $('personal-timer');
+const playerBadge   = $('player-badge');
+const foundCountEl  = $('found-count');
+const bestTimeEl    = $('best-time');
+const lastTimeEl    = $('last-time');
+const winnerText    = $('winner-text');
+const winnerSub     = $('winner-sub');
+const resultsGrid   = $('results-grid');
+const resultBars    = $('result-bars');
+const playAgainBtn  = $('play-again-btn');
+const turnOverlay   = $('turn-overlay');
+const toPlayerText  = $('to-player-text');
+const toSubText     = $('to-sub-text');
+const hudSkipBtn    = $('hud-skip-btn');
+const goBtn         = $('go-btn');
+const toPreviewNum  = $('to-preview-num');
+const playField     = $('play-field');
+const p1NameInput   = $('p1-name');
+const p2NameInput   = $('p2-name');
+const p2InputGroup  = $('p2-input-group');
+const timeLimitInput = $('time-limit');
+
+// ── Geometry ──
+function d2(a, b) { return (a.x-b.x)**2 + (a.y-b.y)**2; }
+
+function cc(a, b, c) {
+  const d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+  if (Math.abs(d) < 1e-12) return null;
+  const a2 = a.x*a.x + a.y*a.y, b2 = b.x*b.x + b.y*b.y, c2 = c.x*c.x + c.y*c.y;
+  return {
+    x: (a2 * (b.y - c.y) + b2 * (c.y - a.y) + c2 * (a.y - b.y)) / d,
+    y: (a2 * (c.x - b.x) + b2 * (a.x - c.x) + c2 * (b.x - a.x)) / d
+  };
+}
+
+function inCC(t, p) { const c = cc(t.a, t.b, t.c); return c ? d2(c, p) <= d2(c, t.a) + 1e-10 : false; }
+
+function delaunay(points) {
+  if (points.length < 3) return [];
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const dx = maxX - minX || 1, dy = maxY - minY || 1, dmax = Math.max(dx, dy);
+  const mx = (minX + maxX) / 2, my = (minY + maxY) / 2;
+  const s1 = { x: mx - 20*dmax, y: my - dmax };
+  const s2 = { x: mx, y: my + 20*dmax };
+  const s3 = { x: mx + 20*dmax, y: my - dmax };
+  const sup = [s1, s2, s3];
+  let tris = [{ a: s1, b: s2, c: s3 }];
+  for (const p of points) {
+    const bad = tris.filter(t => inCC(t, p));
+    if (bad.length === 0) continue;
+    const edgeMap = new Map();
+    for (const t of bad) {
+      for (const e of [[t.a, t.b], [t.b, t.c], [t.c, t.a]]) {
+        const rev = `${e[1].x},${e[1].y}|${e[0].x},${e[0].y}`;
+        if (edgeMap.has(rev)) edgeMap.delete(rev);
+        else edgeMap.set(`${e[0].x},${e[0].y}|${e[1].x},${e[1].y}`, e);
+      }
+    }
+    tris = tris.filter(t => !bad.includes(t));
+    for (const e of edgeMap.values()) tris.push({ a: e[0], b: e[1], c: p });
+  }
+  return tris.filter(t => !sup.some(s => t.a === s || t.b === s || t.c === s));
+}
+
+function voronoi(tris, sites, w, h) {
+  for (const t of tris) t.cc = cc(t.a, t.b, t.c);
+  const sm = new Map();
+  for (const s of sites) sm.set(s, { site: s, tris: [] });
+  for (const t of tris) {
+    const seen = new Set();
+    for (const v of [t.a, t.b, t.c]) {
+      const key = `${v.x},${v.y}`;
+      if (seen.has(key)) continue; seen.add(key);
+      const e = sm.get(v); if (e) e.tris.push(t);
+    }
+  }
+  const cells = [];
+  for (const entry of sm.values()) {
+    if (entry.tris.length < 3) continue;
+    entry.tris.sort((t1, t2) => Math.atan2(t1.cc.y - entry.site.y, t1.cc.x - entry.site.x) - Math.atan2(t2.cc.y - entry.site.y, t2.cc.x - entry.site.x));
+    const verts = entry.tris.map(t => ({ x: t.cc.x, y: t.cc.y }));
+    if (verts.length < 3) continue;
+    const clipped = clip(verts, 0, 0, w, h);
+    if (clipped.length >= 3) cells.push({ site: entry.site, vertices: clipped });
+  }
+  return cells;
+}
+
+function clip(poly, x, y, w, h) {
+  let out = poly.slice();
+  for (const edge of [{ in: p => p.x >= x, xs: 1, v: x }, { in: p => p.x <= x + w, xs: 1, v: x + w }, { in: p => p.y >= y, xs: 0, v: y }, { in: p => p.y <= y + h, xs: 0, v: y + h }]) {
+    if (out.length < 3) return [];
+    const inp = out; out = [];
+    for (let i = 0; i < inp.length; i++) {
+      const cur = inp[i], prev = inp[(i - 1 + inp.length) % inp.length];
+      const ci = edge.in(cur), pi = edge.in(prev);
+      if (ci && pi) out.push(cur);
+      else if (ci !== pi) {
+        const denom = edge.xs ? (cur.x - prev.x) : (cur.y - prev.y);
+        if (Math.abs(denom) > 1e-10) {
+          const t = (edge.v - (edge.xs ? prev.x : prev.y)) / denom;
+          out.push(edge.xs ? { x: edge.v, y: prev.y + t * (cur.y - prev.y) } : { x: prev.x + t * (cur.x - prev.x), y: edge.v });
+        }
+        if (ci) out.push(cur);
+      }
+    }
+  }
+  return out;
+}
+
+function genSites(count, w, h, minDist) {
+  const pts = [];
+  let tries = 0;
+  while (pts.length < count && tries < count * 80) {
+    tries++;
+    const p = { x: 20 + Math.random() * (w - 40), y: 20 + Math.random() * (h - 40) };
+    if (pts.some(q => d2(p, q) < minDist * minDist)) continue;
+    pts.push(p);
+  }
+  return pts;
+}
+
+function pip(px, py, verts) {
+  let inside = false;
+  for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+    const xi = verts[i].x, yi = verts[i].y, xj = verts[j].x, yj = verts[j].y;
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// ── Canvas sizing ──
+let cW = 0, cH = 0;
+
+function resize() {
+  if (!playField) return;
+  const r = playField.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cW = r.width; cH = r.height;
+  canvas.width = cW * dpr; canvas.height = cH * dpr;
+  canvas.style.width = cW + 'px'; canvas.style.height = cH + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fxCanvas.width = cW * dpr; fxCanvas.height = cH * dpr;
+  fxCanvas.style.width = cW + 'px'; fxCanvas.style.height = cH + 'px';
+  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function resizeBg() {
+  const r = startScreen.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  bgCanvas.width = r.width * dpr; bgCanvas.height = r.height * dpr;
+  bgCanvas.style.width = r.width + 'px'; bgCanvas.style.height = r.height + 'px';
+  bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function mPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+let mouseX = -1, mouseY = -1;
+let mouseCanvasX = -1, mouseCanvasY = -1;
+
+// ── State ──
+const G = {
+  mode: 'solo', phase: 'idle',
+  cells: [], avail: [], target: null,
+  players: [{ n: 'Player 1', t: 0, finds: [], skips: 0 }, { n: 'Player 2', t: 0, finds: [], skips: 0 }],
+  pid: 0, shared: 60, turnMs: 0, running: false, turnStart: 0, turnSharedStart: 0,
+  found: 0, best: Infinity, last: null, lt: 0, time: 0,
+  fx: [],
+};
+
+function cur() { return G.players[G.pid]; }
+
+function genV(w, h) {
+  if (w < 100 || h < 100) return [];
+  const n = NUM_MAX - NUM_MIN + 1;
+  const md = Math.min(w, h) / 13;
+  const sites = genSites(n, w, h, md);
+  const m = Math.max(w, h) * 1.5, cx = w / 2, cy = h / 2;
+  const all = [...sites,
+    { x: cx - m, y: cy - m }, { x: cx, y: cy - m }, { x: cx + m, y: cy - m },
+    { x: cx - m, y: cy }, { x: cx + m, y: cy },
+    { x: cx - m, y: cy + m }, { x: cx, y: cy + m }, { x: cx + m, y: cy + m }
+  ];
+  return voronoi(delaunay(all), sites, w, h);
+}
+
+function setup() {
+  const cells = genV(cW, cH);
+  const nums = [];
+  for (let n = NUM_MIN; n <= NUM_MAX; n++) nums.push(n);
+  for (let i = nums.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [nums[i], nums[j]] = [nums[j], nums[i]]; }
+
+  if (cells.length === 0) { show(startScreen); return; }
+  const ac = Math.min(cells.length, nums.length);
+  G.cells = cells.slice(0, ac);
+  G.fx = [];
+  const cx = cW / 2, cy = cH / 2;
+  let maxD = 0;
+  for (let i = 0; i < ac; i++) {
+    const c = G.cells[i];
+    c.num = nums[i]; c.found = false; c.hover = false; c.fb = -1;
+    c.d = Math.hypot(c.site.x - cx, c.site.y - cy);
+    if (c.d > maxD) maxD = c.d;
+    c.pa = Math.atan2(c.site.y - cy, c.site.x - cx);
+  }
+  for (const c of G.cells) c.nd = maxD > 0 ? c.d / maxD : 0;
+  G.avail = nums.slice(0, ac);
+  G.found = 0; G.best = Infinity; G.last = null;
+  G.target = null; G.pid = 0; G.turnMs = 0;
+  G.running = false; G.shared = gameDuration; G.lt = 0; G.time = 0;
+
+  for (const p of G.players) { p.t = 0; p.finds = []; p.skips = 0; }
+
+  targetNumEl.textContent = '\u2014'; targetNumEl.style.color = '';
+  personalTimerEl.textContent = '0.0s';
+  sharedTimerEl.textContent = String(gameDuration); sharedTimerEl.classList.remove('urgent');
+  timerBarFill.style.width = '100%'; timerBarFill.className = '';
+  const circ = 2 * Math.PI * 19;
+  timerRingFill.style.stroke = ACCENT;
+  timerRingFill.style.strokeDasharray = String(circ);
+  timerRingFill.style.strokeDashoffset = '0';
+  hudSkipBtn.style.display = 'none';
+
+  render();
+  G.phase = 'playing';
+  showTurnReady();
+}
+
+// ── Effects ──
+function spawnFX(x, y, kind) {
+  if (kind === 'find') {
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 120;
+      G.fx.push({ kind: 'p', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, decay: 1 + Math.random() * 2, color: ACCENT, sz: 2 + Math.random() * 3 });
+    }
+    G.fx.push({ kind: 'ring', x, y, r: 5, maxR: Math.min(cW, cH) * 0.35, life: 1, color: ACCENT });
+    G.fx.push({ kind: 'ring', x, y, r: 3, maxR: Math.min(cW, cH) * 0.2, life: 1, color: 'oklch(100% 0 0)' });
+    G.fx.push({ kind: 'flash', life: 1 });
+  } else if (kind === 'wrong') {
+    for (let i = 0; i < 6; i++) {
+      const a = Math.random() * Math.PI * 2, s = 30 + Math.random() * 60;
+      G.fx.push({ kind: 'p', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, decay: 1.5 + Math.random() * 2, color: WRONG, sz: 1.5 + Math.random() * 2 });
+    }
+  }
+}
+
+function tickFX(dt) {
+  if (G.fx.length === 0) return;
+  fxCtx.clearRect(0, 0, cW, cH);
+  const alive = [];
+  for (const fx of G.fx) {
+    if (fx.life <= 0) continue;
+    if (fx.kind === 'flash') {
+      fx.life -= dt * 3;
+      if (fx.life > 0) {
+        fxCtx.fillStyle = `oklch(100% 0 0 / ${fx.life * 0.08})`;
+        fxCtx.fillRect(0, 0, cW, cH);
+      }
+      if (fx.life > 0) alive.push(fx);
+    } else if (fx.kind === 'p') {
+      fx.x += fx.vx * dt; fx.y += fx.vy * dt;
+      fx.vx *= 0.95; fx.vy *= 0.95;
+      fx.life -= dt * fx.decay;
+      if (fx.life > 0) {
+        fxCtx.save();
+        fxCtx.globalAlpha = fx.life;
+        fxCtx.fillStyle = fx.color;
+        fxCtx.beginPath();
+        fxCtx.arc(fx.x, fx.y, fx.sz * fx.life, 0, Math.PI * 2);
+        fxCtx.fill();
+        fxCtx.restore();
+        alive.push(fx);
+      }
+    } else if (fx.kind === 'ring') {
+      fx.life -= dt * 2.5;
+      if (fx.life > 0) {
+        const r = fx.r + (1 - fx.life) * (fx.maxR - fx.r);
+        fxCtx.save();
+        fxCtx.globalAlpha = fx.life * 0.35;
+        fxCtx.strokeStyle = fx.color;
+        fxCtx.lineWidth = 3 * fx.life;
+        fxCtx.beginPath();
+        fxCtx.arc(fx.x, fx.y, r, 0, Math.PI * 2);
+        fxCtx.stroke();
+        fxCtx.restore();
+        alive.push(fx);
+      }
+    } else if (fx.kind === 'text') {
+      fx.life -= dt * 2;
+      if (fx.life > 0) {
+        const yOff = (1 - fx.life) * 40;
+        fxCtx.save();
+        fxCtx.globalAlpha = fx.life;
+        fxCtx.fillStyle = fx.color;
+        fxCtx.font = fx.font;
+        fxCtx.textAlign = 'center'; fxCtx.textBaseline = 'bottom';
+        fxCtx.fillText(fx.txt, fx.x, fx.y + yOff);
+        fxCtx.restore();
+        alive.push(fx);
+      }
+    }
+  }
+  G.fx = alive;
+}
+
+// ── Turn mgmt ──
+function startTurn() {
+  if (G.phase !== 'playing' || G.avail.length === 0) return;
+  G.turnMs = 0; G.running = true; G.turnStart = performance.now();
+  G.turnSharedStart = G.shared;
+  targetNumEl.textContent = String(G.target);
+  targetNumEl.style.color = '';
+  targetNumEl.classList.add('pop');
+  setTimeout(() => targetNumEl.classList.remove('pop'), 200);
+  personalTimerEl.textContent = '0.0s';
+  const p = cur();
+  playerBadge.textContent = p.n;
+  playerBadge.className = 'is-' + (G.pid === 0 ? 'p1' : 'p2');
+  hudSkipBtn.style.display = 'inline-block';
+  updateStats(); render();
+}
+
+function completeTurn() {
+  G.running = false; hudSkipBtn.style.display = 'none';
+  if (G.phase !== 'playing') return;
+  if (G.avail.length === 0 || G.shared <= 0) { endGame(); return; }
+  G.pid = (G.pid + 1) % G.players.length;
+  showTurnReady();
+}
+
+function showTurnReady() {
+  G.phase = 'ready';
+  const p = cur();
+  const idx = Math.floor(Math.random() * G.avail.length);
+  G.target = G.avail[idx];
+  targetNumEl.textContent = '\u2014';
+  personalTimerEl.textContent = '';
+  hudSkipBtn.style.display = 'none';
+  toPlayerText.textContent = p.n;
+  toSubText.textContent = 'Find the number';
+  toPreviewNum.textContent = String(G.target);
+  toPreviewNum.className = 'to-num show';
+  goBtn.style.display = 'inline-block';
+  turnOverlay.classList.add('active');
+}
+
+function handleFind(cell) {
+  if (G.phase !== 'playing' || !G.running || G.target === null) return;
+  if (cell.num !== G.target) return;
+  const turnDelta = G.turnSharedStart - G.shared;
+  G.running = false;
+  const p = cur();
+  p.t += turnDelta; p.finds.push({ num: cell.num, time: turnDelta });
+  hudSkipBtn.style.display = 'none';
+  G.avail = G.avail.filter(n => n !== cell.num);
+  G.found++; G.last = turnDelta * 1000;
+  if (turnDelta < G.best / 1000) G.best = turnDelta * 1000;
+  cell.found = true; cell.fb = G.pid;
+
+  spawnFX(cell.site.x, cell.site.y, 'find');
+
+  const fsz2 = Math.max(12, Math.min(40, Math.sqrt((cW * cH) / Math.max(G.cells.length, 1)) * 0.25));
+  G.fx.push({ kind: 'text', x: cell.site.x, y: cell.site.y - 18, txt: turnDelta.toFixed(1) + 's', font: `700 ${fsz2}px ${FONT_MONO}`, color: ACCENT, life: 1 });
+
+  updateStats(); render();
+  targetNumEl.style.color = cv('found');
+  setTimeout(completeTurn, 350);
+}
+
+function flashWrong(cell) {
+  spawnFX(cell.site.x, cell.site.y, 'wrong');
+  cell.wr = 1; render();
+  setTimeout(() => { cell.wr = 0; render(); }, 200);
+}
+
+function handleSkip() {
+  if (G.phase !== 'playing' || !G.running) return;
+  const turnDelta = G.turnSharedStart - G.shared;
+  G.running = false;
+  const p = cur();
+  p.t += turnDelta + SKIP_PEN; p.skips++;
+  G.last = null; hudSkipBtn.style.display = 'none';
+  updateStats();
+  setTimeout(completeTurn, 100);
+}
+
+function endGame() {
+  if (G.phase === 'result') return;
+  if (G.running) {
+    cur().t += G.turnSharedStart - G.shared;
+    G.running = false;
+  }
+  G.phase = 'result';
+  targetNumEl.textContent = '\u2014'; targetNumEl.style.color = '';
+  hudSkipBtn.style.display = 'none';
+  turnOverlay.classList.remove('active');
+  toPreviewNum.className = 'to-num';
+  goBtn.style.display = 'none';
+  gameScreen.classList.add('hidden');
+  resultsScreen.classList.remove('hidden');
+
+  if (G.mode === 'solo') {
+    const p = G.players[0];
+    const totalPlayed = gameDuration;
+    const avg = p.finds.length > 0 ? (p.t / p.finds.length) : 0;
+    winnerText.textContent = 'Game Over';
+    winnerSub.textContent = `${totalPlayed.toFixed(1)}s · ${G.mode} · numbers ${NUM_MIN}–${NUM_MAX}`;
+    const xs = [];
+    if (p.finds.length > 0) xs.push(`${avg.toFixed(2)}s avg`);
+    if (p.skips > 0) xs.push(`${p.skips} skipped`);
+    const estr = xs.length > 0 ? ' \u00b7 ' + xs.join(' \u00b7 ') : '';
+    resultsGrid.innerHTML = `<div class="r-card winner"><div class="rc-name">${p.n}</div><div class="rc-stat" style="color:var(--accent)">${p.finds.length} found · ${totalPlayed.toFixed(1)}s</div><div class="rc-sub">${p.finds.length} / ${G.cells.length} numbers${estr}</div></div>`;
+    resultBars.innerHTML = '';
+  } else {
+    const p1 = G.players[0], p2 = G.players[1];
+    const mx = Math.max(p1.t, p2.t, 0.01);
+    const tie = Math.abs(p1.t - p2.t) < 0.01;
+    let w = null;
+    if (!tie) w = p1.t < p2.t ? p1 : p2;
+    resultBars.innerHTML = `
+      <div class="rb-group"><div class="rb-label" style="color:var(--accent)">${p1.n}</div><div class="rb-track"><div class="rb-fill p1" style="height:0%"></div></div><div class="rb-val">${p1.t.toFixed(1)}s</div></div>
+      <div class="rb-group"><div class="rb-label" style="color:var(--found)">${p2.n}</div><div class="rb-track"><div class="rb-fill p2" style="height:0%"></div></div><div class="rb-val">${p2.t.toFixed(1)}s</div></div>`;
+    setTimeout(() => {
+      const fs = resultBars.querySelectorAll('.rb-fill');
+      if (fs[0]) fs[0].style.height = ((p1.t / mx) * 100) + '%';
+      if (fs[1]) fs[1].style.height = ((p2.t / mx) * 100) + '%';
+    }, 50);
+
+    const card = (p, iw) => {
+      const avg = p.finds.length > 0 ? (p.t / p.finds.length) : 0;
+      const pts = [];
+      if (p.skips > 0) pts.push(`${p.skips} skipped`);
+      if (avg > 0) pts.push(`${avg.toFixed(2)}s avg`);
+      return `<div class="r-card${iw ? ' winner' : ''}"><div class="rc-name">${p.n}</div><div class="rc-stat">${p.finds.length} found · ${p.t.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`;
+    };
+    if (tie) { winnerText.textContent = "It's a Tie!"; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${G.mode} · numbers ${NUM_MIN}–${NUM_MAX}`; }
+    else { winnerText.textContent = `${w.n} Wins!`; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${G.mode} · numbers ${NUM_MIN}–${NUM_MAX}`; }
+    resultsGrid.innerHTML = card(p1, w === p1) + card(p2, w === p2);
+  }
+}
+
+// ── Render ──
+function render() {
+  const w = cW, h = cH;
+  ctx.clearRect(0, 0, w, h);
+
+  const sx = mouseX >= 0 ? mouseX : w/2;
+  const sy = mouseY >= 0 ? mouseY : h/2;
+  const spotR = Math.max(w, h) * 0.7;
+
+  const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, spotR);
+  grad.addColorStop(0, 'oklch(22% 0.028 265)');
+  grad.addColorStop(0.35, 'oklch(18% 0.018 260)');
+  grad.addColorStop(0.6, 'oklch(14% 0.01 255)');
+  grad.addColorStop(1, 'oklch(8% 0.004 250)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  const cells = G.cells;
+  if (!cells || cells.length === 0) return;
+
+  const t = G.time;
+  const isP = G.phase === 'playing';
+  const hueCycle = Math.sin(t * 0.08) * 5;
+
+  const maxD2 = w * w + h * h;
+
+  for (const cell of cells) {
+    const v = cell.vertices;
+    if (v.length < 3) continue;
+    const isHover = cell.hover && isP;
+
+    const dx = cell.site.x - sx, dy = cell.site.y - sy;
+    const spot = Math.max(0, 1 - (dx*dx + dy*dy) / maxD2);
+
+    ctx.beginPath();
+    ctx.moveTo(v[0].x, v[0].y);
+    for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x, v[i].y);
+    ctx.closePath();
+
+    if (cell.found) {
+      ctx.fillStyle = okh(0.08, 0.18, 145);
+    } else if (cell.wr > 0) {
+      ctx.fillStyle = okh(0.16, 0.25, 25);
+    } else if (isHover) {
+      ctx.fillStyle = ACCENT_DIM;
+    } else {
+      const b = 0.08 + 0.28 * Math.pow(spot, 2);
+      ctx.fillStyle = `oklch(${(b * 100).toFixed(1)}% 0.022 ${260 + hueCycle})`;
+    }
+    ctx.fill();
+
+    if (cell.found) {
+      ctx.strokeStyle = okh(0.16, 0.18, 145);
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    } else if (isHover) {
+      ctx.save();
+      ctx.shadowColor = ACCENT;
+      ctx.shadowBlur = 15;
+      ctx.strokeStyle = ACCENT;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      const strokeA = 0.03 + 0.15 * Math.pow(spot, 2);
+      ctx.strokeStyle = `oklch(55% 0.02 260 / ${strokeA.toFixed(3)})`;
+      ctx.lineWidth = 0.5 + 0.6 * Math.pow(spot, 2);
+      ctx.stroke();
+    }
+  }
+
+  const avgArea = (w * h) / Math.max(cells.length, 1);
+  const fsz = Math.max(14, Math.min(64, Math.sqrt(avgArea) * 0.40));
+
+  for (const cell of cells) {
+    if (cell.num == null) continue;
+    ctx.save();
+
+    const dx = cell.site.x - sx, dy = cell.site.y - sy;
+    const spot = Math.max(0, 1 - (dx*dx + dy*dy) / maxD2);
+
+    if (cell.found) {
+      ctx.globalAlpha = 0.03 + 0.04 * Math.pow(spot, 2);
+      ctx.fillStyle = FOUND;
+      ctx.font = `500 ${fsz * 0.7}px ${FONT_MONO}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(cell.num), cell.site.x, cell.site.y);
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = 0.2 + 0.3 * Math.pow(spot, 2);
+      ctx.fillStyle = FOUND;
+      ctx.beginPath();
+      ctx.arc(cell.site.x, cell.site.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      continue;
+    } else if (cell.wr > 0) {
+      ctx.fillStyle = WRONG;
+      ctx.font = `700 ${fsz * 0.7}px ${FONT_MONO}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('\u2715', cell.site.x + 1, cell.site.y);
+      ctx.restore();
+      continue;
+    } else {
+      ctx.globalAlpha = 0.15 + 0.85 * Math.pow(spot, 3);
+      const nb = 42 + 55 * Math.pow(spot, 2);
+      ctx.fillStyle = `oklch(${nb.toFixed(1)}% 0.015 ${260 + hueCycle})`;
+      ctx.font = `600 ${fsz}px ${FONT_MONO}`;
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(cell.num), cell.site.x, cell.site.y);
+    ctx.restore();
+  }
+}
+
+function okh(l, c, h) { return `oklch(${(l*100).toFixed(1)}% ${c} ${h})`; }
+const ACCENT_DIM = `oklch(68% 0.2 260 / 0.12)`;
+
+function hitTest(mx, my) {
+  for (const cell of G.cells) { if (cell.found) continue; if (pip(mx, my, cell.vertices)) return cell; }
+  return null;
+}
+
+canvas.addEventListener('mousemove', e => {
+  const m = mPos(e);
+  mouseCanvasX = m.x; mouseCanvasY = m.y;
+  const r = playField.getBoundingClientRect();
+  mouseX = e.clientX - r.left; mouseY = e.clientY - r.top;
+  if (G.phase !== 'playing') { canvas.style.cursor = 'default'; return; }
+  const hit = hitTest(m.x, m.y);
+  let ch = false;
+  for (const c of G.cells) { const h = c === hit; if (c.hover !== h) { c.hover = h; ch = true; } }
+  if (ch) render();
+  canvas.style.cursor = hit ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (G.phase !== 'playing') return;
+  const m = mPos(e);
+  const hit = hitTest(m.x, m.y);
+  if (!hit) return;
+  if (hit.num === G.target) handleFind(hit);
+  else flashWrong(hit);
+});
+
+function updateStats() {
+  foundCountEl.textContent = `${G.found}/${G.cells.length}`;
+  if (G.best < Infinity) bestTimeEl.textContent = (G.best / 1000).toFixed(1) + 's';
+  if (G.last != null) lastTimeEl.textContent = (G.last / 1000).toFixed(1) + 's';
+  sharedTimerEl.textContent = String(Math.max(0, Math.ceil(G.shared)));
+  const pct = G.shared / gameDuration;
+  const circ = 2 * Math.PI * 19;
+  timerRingFill.style.strokeDashoffset = String(circ * (1 - pct));
+  timerBarFill.style.width = (pct * 100) + '%';
+}
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (G.phase === 'idle' || G.phase === 'result') { G.lt = 0; return; }
+  if (G.lt === 0) { G.lt = now; return; }
+  const dt = Math.min((now - G.lt) / 1000, 0.05);
+  G.lt = now; G.time += dt;
+
+  if (G.phase === 'playing') G.shared -= dt;
+  if (G.shared <= 0) { G.shared = 0; updateStats(); if (G.phase === 'playing' || G.phase === 'ready') endGame(); return; }
+
+  sharedTimerEl.textContent = String(Math.ceil(G.shared));
+  sharedTimerEl.classList.toggle('urgent', G.shared < 10);
+  timerBarFill.classList.toggle('urgent', G.shared < 10);
+  timerRingFill.style.stroke = G.shared < 10 ? WRONG : ACCENT;
+
+  const pct = G.shared / gameDuration;
+  const circ = 2 * Math.PI * 19;
+  timerRingFill.style.strokeDashoffset = String(circ * (1 - pct));
+  timerBarFill.style.width = (pct * 100) + '%';
+
+  if (G.phase === 'playing' && G.running) {
+    G.turnMs += dt * 1000;
+    const pSec = G.turnMs / 1000;
+    personalTimerEl.textContent = pSec < 10 ? pSec.toFixed(2) + 's' : pSec.toFixed(1) + 's';
+  }
+
+  tickFX(dt);
+  if (G.phase === 'playing') render();
+}
+
+function show(s) {
+  [startScreen, gameScreen, resultsScreen].forEach(el => el.classList.add('hidden'));
+  s.classList.remove('hidden');
+}
+
+// ── Events ──
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    G.mode = btn.dataset.mode;
+    p2InputGroup.style.display = G.mode === 'pvp' ? 'flex' : 'none';
+  });
+});
+
+startBtn.addEventListener('click', () => {
+  gameDuration = parseInt(timeLimitInput.value, 10) || 60;
+  if (gameDuration < 5) gameDuration = 5;
+  if (gameDuration > 600) gameDuration = 600;
+  G.players[0].n = p1NameInput.value.trim() || 'Player 1';
+  G.players[1].n = p2NameInput.value.trim() || 'Player 2';
+  show(gameScreen);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      resize();
+      if (cW < 100 || cH < 100) return;
+      setup(); G.lt = performance.now();
+    });
+  });
+});
+
+playAgainBtn.addEventListener('click', () => {
+  resultsGrid.innerHTML = ''; resultBars.innerHTML = '';
+  turnOverlay.classList.remove('active');
+  toPreviewNum.className = 'to-num';
+  goBtn.style.display = 'none';
+  show(startScreen);
+  resizeBg();
+  initBg();
+});
+
+hudSkipBtn.addEventListener('click', handleSkip);
+
+goBtn.addEventListener('click', () => {
+  turnOverlay.classList.remove('active');
+  toPreviewNum.className = 'to-num';
+  goBtn.style.display = 'none';
+  if (G.phase !== 'ready') return;
+  if (G.shared <= 0) { endGame(); return; }
+  G.phase = 'playing';
+  startTurn();
+});
+
+window.addEventListener('resize', () => {
+  resize();
+  resizeBg();
+  if (G.phase === 'playing') render();
+});
+
+// ── Background animation (start screen) ──
+let bgTime = 0;
+let bgCells = [];
+
+function initBg() {
+  const rect = startScreen.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w < 100 || h < 100) return;
+  bgCells = [];
+  const sites = [];
+  for (let i = 0; i < 35; i++) {
+    sites.push({ x: 20 + Math.random() * (w - 40), y: 20 + Math.random() * (h - 40), ph: Math.random() * Math.PI * 2, sp: 0.2 + Math.random() * 0.4, ox: 0, oy: 0 });
+  }
+  const m = Math.max(w, h), cx = w/2, cy = h/2;
+  const all = [...sites,
+    { x: cx - m, y: cy - m }, { x: cx, y: cy - m }, { x: cx + m, y: cy - m },
+    { x: cx - m, y: cy }, { x: cx + m, y: cy },
+    { x: cx - m, y: cy + m }, { x: cx, y: cy + m }, { x: cx + m, y: cy + m }
+  ];
+  const tris = delaunay(all);
+  const cells = voronoi(tris, sites, w, h);
+  for (const c of cells) {
+    c.nd = Math.hypot(c.site.x - cx, c.site.y - cy) / Math.max(w, h) * 2;
+    c.ph = Math.random() * Math.PI * 2;
+  }
+  bgCells = cells;
+}
+
+function drawBg(now) {
+  if (G.phase !== 'idle') return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = bgCanvas.width / dpr, h = bgCanvas.height / dpr;
+  if (w < 100 || h < 100 || bgCells.length === 0) {
+    requestAnimationFrame(drawBg);
+    return;
+  }
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  bgCtx.save();
+  bgCtx.scale(dpr, dpr);
+  bgCtx.fillStyle = cv('bg');
+  bgCtx.fillRect(0, 0, w, h);
+
+  const t = bgTime;
+  const cx = w/2, cy = h/2;
+
+  for (const cell of bgCells) {
+    const v = cell.vertices;
+    if (v.length < 3) continue;
+    const nd = cell.nd || 0;
+    const pulse = 0.06 + 0.04 * Math.sin(t * 0.5 + cell.ph);
+    const hVal = 260 - nd * 40 + Math.sin(t * 0.3 + cell.ph) * 10;
+    bgCtx.beginPath();
+    bgCtx.moveTo(v[0].x, v[0].y);
+    for (let i = 1; i < v.length; i++) bgCtx.lineTo(v[i].x, v[i].y);
+    bgCtx.closePath();
+    bgCtx.fillStyle = `oklch(${(pulse * 100).toFixed(1)}% 0.03 ${hVal})`;
+    bgCtx.fill();
+    bgCtx.strokeStyle = `oklch(60% 0.02 260 / 0.04)`;
+    bgCtx.lineWidth = 0.5;
+    bgCtx.stroke();
+  }
+
+  const grad2 = bgCtx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.55);
+  grad2.addColorStop(0, 'oklch(68% 0.2 260 / 0.08)');
+  grad2.addColorStop(0.5, 'oklch(65% 0.18 145 / 0.03)');
+  grad2.addColorStop(1, 'transparent');
+  bgCtx.fillStyle = grad2;
+  bgCtx.fillRect(0, 0, w, h);
+
+  bgCtx.restore();
+}
+
+show(startScreen);
+resizeBg();
+initBg();
+requestAnimationFrame(function bgLoop(now) {
+  if (G.phase === 'idle') { bgTime = now / 1000; drawBg(now); }
+  requestAnimationFrame(bgLoop);
+});
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
