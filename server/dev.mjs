@@ -275,9 +275,19 @@ const server = http.createServer((req, res) => {
     return
   }
 
-  if (req.method === 'GET') {
+  if (req.method === 'GET' || req.method === 'HEAD') {
     let filePath = path.join(PUBLIC, url.pathname === '/' ? 'index.html' : url.pathname)
-    serveFile(res, filePath)
+    const ext = path.extname(filePath)
+    try {
+      const stat = fs.statSync(filePath)
+      if (!stat.isFile()) { res.writeHead(404); res.end(); return }
+      res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Content-Length': stat.size })
+      if (req.method === 'GET') fs.createReadStream(filePath).pipe(res)
+      else res.end()
+    } catch {
+      res.writeHead(404)
+      res.end('Not found')
+    }
     return
   }
 
