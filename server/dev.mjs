@@ -31,7 +31,7 @@ function serveFile(res, filePath) {
 const rooms = new Map()
 
 const SYMBOL_PACKS = {
-  numbers: { count: 20, id: 'numbers' },
+  numbers: { count: 90, id: 'numbers' },
 }
 
 function mulberry32(a) {
