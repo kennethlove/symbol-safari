@@ -13,7 +13,7 @@ export const WRONG = cv('wrong');
 export const FONT_MONO = cv('font-mono');
 
 export let currentAccent = localStorage.getItem('sf-accent') || 'blue';
-export let currentP2Color = localStorage.getItem('sf-p2-color') || 'green';
+export let currentP2Color = localStorage.getItem('sf-p2-color') || 'none';
 export let currentMode = localStorage.getItem('sf-mode') || 'dark';
 
 export const startScreen   = $('start-screen');
@@ -177,7 +177,7 @@ export function applyP2Color(id) {
 export function syncSwatches() {
   if (G.mode === 'online') return
   document.querySelectorAll('.swatch-row:not(#p2-swatch-row) .swatch').forEach(s => {
-    s.classList.toggle('disabled', s.dataset.accent === currentP2Color);
+    s.classList.toggle('disabled', s.dataset.accent === currentP2Color && s.dataset.accent !== 'none');
   });
   document.querySelectorAll('#p2-swatch-row .swatch').forEach(s => {
     s.classList.toggle('disabled', s.dataset.p2Color === currentAccent);

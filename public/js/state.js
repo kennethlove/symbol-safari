@@ -36,7 +36,8 @@ export const THEMES = {
     green: 'oklch(65% 0.18 145)',
     purple: 'oklch(62% 0.2 300)',
     orange: 'oklch(65% 0.18 55)',
-    red:   'oklch(60% 0.2 25)'
+    red:   'oklch(60% 0.2 25)',
+    none:  'oklch(99% 0 0)'
   },
   mode: { light: 'light', dark: 'dark' }
 };

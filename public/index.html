@@ -254,6 +254,9 @@ html, body {
 .swatch:hover { transform: scale(1.15); }
 .swatch.selected { border-color: var(--fg); }
 .swatch.disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+.swatch[data-p2-color="none"] { background: transparent; border-width: 2px; border-style: dashed; border-color: var(--border); }
+.swatch[data-p2-color="none"].selected { border-color: var(--fg); }
+.swatch[data-p2-color="none"]:hover { border-color: var(--muted); }
 
 .mode-toggle {
   display: flex;
@@ -654,8 +657,9 @@ html, body {
           <div class="swatch" data-accent="red" style="background:oklch(60% 0.2 25)"></div>
         </div>
         <div class="swatch-row" id="p2-swatch-row" style="display:none">
+          <div class="swatch selected" data-p2-color="none"></div>
           <div class="swatch" data-p2-color="blue" style="background:oklch(68% 0.2 260)"></div>
-          <div class="swatch selected" data-p2-color="green" style="background:oklch(65% 0.18 145)"></div>
+          <div class="swatch" data-p2-color="green" style="background:oklch(65% 0.18 145)"></div>
           <div class="swatch" data-p2-color="purple" style="background:oklch(62% 0.2 300)"></div>
           <div class="swatch" data-p2-color="orange" style="background:oklch(65% 0.18 55)"></div>
           <div class="swatch" data-p2-color="red" style="background:oklch(60% 0.2 25)"></div>
