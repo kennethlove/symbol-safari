@@ -138,11 +138,11 @@ function clipPoly(vertices, w, h) {
   return out.length >= 3 ? out : null
 }
 
-export function voronoi(tris, sites, w, h) {
+export function voronoi(tris, allPts, siteCount, w, h) {
   const adj = new Map()
   for (const t of tris) {
     for (const s of [t.a, t.b, t.c]) {
-      if (s < sites.length) {
+      if (s < siteCount) {
         if (!adj.has(s)) adj.set(s, [])
         adj.get(s).push(t)
       }
@@ -152,15 +152,15 @@ export function voronoi(tris, sites, w, h) {
   for (const [si, triList] of adj) {
     const verts = []
     for (const t of triList) {
-      const cc = circumcenter(sites[t.a], sites[t.b], sites[t.c])
+      const cc = circumcenter(allPts[t.a], allPts[t.b], allPts[t.c])
       if (cc) verts.push(cc)
     }
     if (verts.length < 3) continue
-    const cx = sites[si].x, cy = sites[si].y
+    const cx = allPts[si].x, cy = allPts[si].y
     verts.sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx))
     const clipped = clipPoly(verts, w, h)
     if (!clipped || clipped.length < 3) continue
-    cells.push({ site: sites[si], vertices: clipped })
+    cells.push({ site: allPts[si], vertices: clipped })
   }
   return cells
 }
@@ -178,5 +178,5 @@ export function genV(w, h, count, rand) {
     { x: cx - m, y: cy + m }, { x: cx, y: cy + m }, { x: cx + m, y: cy + m },
   ]
   const tris = delaunay(all)
-  return voronoi(tris, sites, w, h)
+  return voronoi(tris, all, sites.length, w, h)
 }

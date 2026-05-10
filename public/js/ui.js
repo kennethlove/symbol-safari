@@ -256,7 +256,7 @@ export function initBg() {
     { x: cx - m, y: cy + m }, { x: cx, y: cy + m }, { x: cx + m, y: cy + m }
   ];
   const tris = delaunay(all);
-  const cells = voronoi(tris, sites, w, h);
+  const cells = voronoi(tris, all, sites.length, w, h);
   for (const c of cells) {
     c.nd = Math.hypot(c.site.x - cx, c.site.y - cy) / Math.max(w, h) * 2;
     c.ph = Math.random() * Math.PI * 2;
