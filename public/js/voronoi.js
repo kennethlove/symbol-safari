@@ -58,18 +58,15 @@ function sharedEdge(t1, t2) {
 }
 
 function dedupEdges(edges) {
-  const deduped = []
-  for (let i = 0; i < edges.length; i++) {
-    let dup = false
-    for (let j = i + 1; j < edges.length; j++) {
-      if ((edges[i][0] === edges[j][0] && edges[i][1] === edges[j][1]) ||
-          (edges[i][0] === edges[j][1] && edges[i][1] === edges[j][0])) {
-        dup = true; break
-      }
-    }
-    if (!dup) deduped.push(edges[i])
+  const count = new Map()
+  for (const e of edges) {
+    const key = e[0] < e[1] ? `${e[0]},${e[1]}` : `${e[1]},${e[0]}`
+    count.set(key, (count.get(key) || 0) + 1)
   }
-  return deduped
+  return edges.filter(e => {
+    const key = e[0] < e[1] ? `${e[0]},${e[1]}` : `${e[1]},${e[0]}`
+    return count.get(key) === 1
+  })
 }
 
 export function delaunay(pts) {
