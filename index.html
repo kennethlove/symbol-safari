@@ -414,15 +414,6 @@ html, body {
 
 #target-number.pop { transform: scale(1.15); }
 
-#personal-timer {
-  font-family: var(--font-mono);
-  font-size: 15px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg);
-  line-height: 1;
-}
-
 #turn-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 
 #timer-bar {
@@ -674,7 +665,7 @@ html, body {
         <svg id="timer-ring-svg" width="44" height="44" viewBox="0 0 44 44">
           <circle cx="22" cy="22" r="19" fill="none" stroke="var(--border)" stroke-width="2.5"/>
           <circle id="timer-ring-fill" cx="22" cy="22" r="19" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="119.38" stroke-dashoffset="0"/>
-          <text id="timer-ring-text" x="22" y="22" text-anchor="middle" dominant-baseline="central" fill="var(--fg)" font-size="16" font-weight="700" font-family="var(--font-mono)">60</text>
+          <text id="timer-ring-text" x="22" y="22" text-anchor="middle" dominant-baseline="central" fill="var(--fg)" font-size="13" font-weight="700" font-family="var(--font-mono)">60.0</text>
         </svg>
       </div>
     </div>
@@ -682,7 +673,6 @@ html, body {
       <div id="target-block">
         <span class="t-label" id="pack-name-label">Find</span>
         <div id="target-number">—</div>
-        <div id="personal-timer">0.0s</div>
       </div>
     </div>
     <div class="hud-section hud-right" style="display:flex;align-items:flex-end;gap:6px;flex-direction:column">
@@ -752,24 +742,6 @@ const SYMBOL_PACKS = {
     font: 'var(--font-mono)',
     makePreview: () => ['14','67','38','92','51','26','73','45','89']
   },
-  cjkEasy: {
-    id: 'cjkEasy', name: 'CJK Easy', cells: 60, desc: '60 symbols',
-    symbols: ['一','二','三','人','大','口','十','上','下','山','水','火','日','月','土','木','白','中','力','女','子','王','天','手','目','田','石','千','川','工','明','好','生','花','金','雨','星','年','家','音','心','風','林','足','道','時','気','食','車','青','赤','空','海','岩','町','店','茶','豆','竹','森'],
-    font: 'var(--font-mono-symbol)',
-    makePreview: () => ['一','二','三','人','大','口','水','火','日','月']
-  },
-  cjkMedium: {
-    id: 'cjkMedium', name: 'CJK Medium', cells: 60, desc: '60 symbols',
-    symbols: ['魚','鳥','語','楽','読','書','聞','話','帰','間','顔','声','絵','数','曜','雑','難','機','飯','色','船','建','園','鳴','薬','電','校','真','夢','銀','雲','前','週','毎','品','回','発','物','考','高','最','新','作','入','出','行','見','言','立','長','玉','糸','村','花','雨','船','港','公','園'],
-    font: 'var(--font-mono-symbol)',
-    makePreview: () => ['魚','鳥','語','楽','読','書','聞','話','顔','声']
-  },
-  cjkHard: {
-    id: 'cjkHard', name: 'CJK Hard', cells: 60, desc: '60 symbols',
-    symbols: ['議','競','職','織','驚','鑑','護','権','観','闘','臓','臨','覧','療','懸','譲','襲','躍','露','警','爆','壊','顕','鷹','鱗','鬱','麟','驥','鱸','魔','鬼','魂','霊','闇','雲','霧','霜','雷','震','雫','氷','凛','響','躍','露','警','爆','壊','顕','鷹','鱗','鬱','麟','驥','鱸','魔','鬼','魂'],
-    font: 'var(--font-mono-symbol)',
-    makePreview: () => ['議','競','職','驚','鑑','護','闘','臓','鬱','麟']
-  }
 };
 
 const THEMES = {
@@ -792,7 +764,7 @@ const $ = id => document.getElementById(id);
 function cv(name) {
   return getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
 }
-const ACCENT = cv('accent');
+let ACCENT = cv('accent');
 const FOUND = cv('found');
 const WRONG = cv('wrong');
 const FONT_MONO = cv('font-mono');
@@ -813,7 +785,6 @@ const timerRingFill = $('timer-ring-fill');
 const timerRingText = $('timer-ring-text');
 const targetNumEl   = $('target-number');
 const packNameLabel = $('pack-name-label');
-const personalTimerEl = $('personal-timer');
 const playerBadge   = $('player-badge');
 const soloFoundEl   = $('solo-found');
 const soloSkipsEl   = $('solo-skips');
@@ -858,6 +829,7 @@ function applyAccent(id) {
   document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.dataset.accent === id));
   currentAccent = id;
   localStorage.setItem('sf-accent', id);
+  ACCENT = cv('accent');
 }
 
 function applyMode(m) {
@@ -1160,10 +1132,9 @@ function setup() {
 
   for (const p of G.players) { p.t = 0; p.finds = []; p.skips = 0; }
 
-  targetNumEl.textContent = '\u2014'; targetNumEl.style.color = '';
-  packNameLabel.textContent = pack.name;
-  personalTimerEl.textContent = '0.0s';
-  timerRingText.textContent = String(gameDuration);
+  targetNumEl.textContent = '??'; targetNumEl.style.color = '';
+  packNameLabel.textContent = 'Number';
+  timerRingText.textContent = gameDuration.toFixed(1);
   timerBarFill.style.width = '100%'; timerBarFill.className = '';
   const circ = 2 * Math.PI * 19;
   timerRingFill.style.stroke = ACCENT;
@@ -1261,7 +1232,6 @@ function startTurn() {
   targetNumEl.style.color = '';
   targetNumEl.classList.add('pop');
   setTimeout(() => targetNumEl.classList.remove('pop'), 200);
-  personalTimerEl.textContent = '0.0s';
   const p = cur();
   playerBadge.textContent = p.n;
   playerBadge.className = 'is-' + (G.pid === 0 ? 'p1' : 'p2');
@@ -1281,9 +1251,15 @@ function completeTurn() {
 
 function showTurnReady() {
   G.phase = 'ready';
-  targetNumEl.textContent = '\u2014';
+  targetNumEl.style.color = '';
+  targetNumEl.textContent = '??';
   if (G.avail.length > 0) {
-    const idx = Math.floor(Math.random() * G.avail.length);
+    let idx = Math.floor(Math.random() * G.avail.length);
+    if (G.avail.length > 1 && G.target !== null) {
+      while (G.avail[idx] === G.target) {
+        idx = Math.floor(Math.random() * G.avail.length);
+      }
+    }
     G.target = G.avail[idx];
   } else {
     G.target = null;
@@ -1343,7 +1319,7 @@ function endGame() {
   if (G.phase === 'result') return;
   G.running = false;
   G.phase = 'result';
-  targetNumEl.textContent = '\u2014'; targetNumEl.style.color = '';
+  targetNumEl.textContent = '??'; targetNumEl.style.color = '';
   hudSkipBtn.style.display = 'none';
   turnOverlay.classList.remove('active');
   toPreviewNum.className = 'to-num';
@@ -1558,8 +1534,7 @@ function loop(now) {
   if (G.phase !== 'ready') G.shared -= dt;
   if (G.shared <= 0) { G.shared = 0; updateStats(); if (G.phase === 'playing' || G.phase === 'ready') endGame(); return; }
 
-  const ceilShared = String(Math.ceil(G.shared));
-  timerRingText.textContent = ceilShared;
+  timerRingText.textContent = G.shared.toFixed(1);
 
   timerRingFill.style.stroke = G.shared < 10 ? WRONG : ACCENT;
   timerBarFill.classList.toggle('urgent', G.shared < 10);
@@ -1569,12 +1544,6 @@ function loop(now) {
   const circ = 2 * Math.PI * 19;
   timerRingFill.style.strokeDashoffset = String(circ * (1 - pct));
   timerBarFill.style.width = (pct * 100) + '%';
-
-  if (G.phase === 'playing' && G.running) {
-    G.turnMs += dt * 1000;
-    const pSec = G.turnMs / 1000;
-    personalTimerEl.textContent = pSec < 10 ? pSec.toFixed(2) + 's' : pSec.toFixed(1) + 's';
-  }
 
   tickFX(dt);
   if (G.phase === 'playing') render();
