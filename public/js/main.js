@@ -1,5 +1,6 @@
 import { G, gameDuration, setGameDuration, selectedPackId, setup, endGame, handleFind, flashWrong, handleSkip, initPackPicker, initThemeUI, startTurn, completeTurn, showTurnReady } from './state.js';
 import { render, resize, hitTest, setMousePos, cW, cH } from './renderer.js';
+import { polyArea, minEdgeDist } from './voronoi.js';
 import { tickFX, renderFX } from './effects.js';
 import { spawnFX } from './effects.js';
 import {
@@ -188,7 +189,6 @@ function handleMsg(msg) {
       G.best = Infinity
       G.fx = []
       G.target = null
-      G.globalFontSize = 24
       G.packFont = ''
       G.time = 0
       G.lt = 0
@@ -198,6 +198,18 @@ function handleMsg(msg) {
       document.querySelector('.hud-right .t-label').style.display = 'none'
       show(gameScreen)
       resize()
+      const cx = cW / 2, cy = cH / 2
+      let maxD = 0
+      for (const c of G.cells) {
+        c.d = Math.hypot(c.site.x - cx, c.site.y - cy)
+        if (c.d > maxD) maxD = c.d
+        c.pa = Math.atan2(c.site.y - cy, c.site.x - cx)
+        c.area = polyArea(c.vertices)
+        c.minEdge = minEdgeDist(c.site.x, c.site.y, c.vertices)
+      }
+      for (const c of G.cells) c.nd = maxD > 0 ? c.d / maxD : 0
+      const radii = G.cells.map(c => c.minEdge).sort((a, b) => a - b)
+      G.globalFontSize = Math.max(20, Math.min(46, radii[Math.max(0, Math.floor(radii.length * 0.3))] * 1.6))
       render(ctx, fxCtx, G)
       updateStats(G)
       targetNumEl.textContent = '??'

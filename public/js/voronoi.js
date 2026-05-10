@@ -167,9 +167,15 @@ export function voronoi(tris, allPts, siteCount, w, h) {
 
 export function genV(w, h, count, rand) {
   const rng = rand || Math.random
+  const minDist = Math.sqrt((w * h) / count) * 0.45
+  const pad = Math.max(20, minDist)
   const sites = []
-  for (let i = 0; i < count; i++) {
-    sites.push({ x: rng() * w, y: rng() * h })
+  let tries = 0
+  while (sites.length < count && tries < count * 150) {
+    tries++
+    const p = { x: pad + rng() * (w - pad * 2), y: pad + rng() * (h - pad * 2) }
+    if (sites.some(q => Math.hypot(q.x - p.x, q.y - p.y) < minDist)) continue
+    sites.push(p)
   }
   const m = Math.max(w, h), cx = w / 2, cy = h / 2
   const all = [...sites,
