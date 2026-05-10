@@ -176,9 +176,6 @@ export function applyP2Color(id) {
 
 export function syncSwatches() {
   if (G.mode === 'online') return
-  document.querySelectorAll('.swatch-row:not(#p2-swatch-row) .swatch').forEach(s => {
-    s.classList.toggle('disabled', s.dataset.accent === currentP2Color && s.dataset.accent !== 'none');
-  });
   document.querySelectorAll('#p2-swatch-row .swatch').forEach(s => {
     s.classList.toggle('disabled', s.dataset.p2Color === currentAccent);
   });
