@@ -13,7 +13,16 @@ export const WRONG = cv('wrong');
 export const FONT_MONO = cv('font-mono');
 
 export let currentAccent = localStorage.getItem('sf-accent') || 'blue';
-export let currentP2Color = localStorage.getItem('sf-p2-color') || 'none';
+export let currentP2Color = (() => {
+  const v = localStorage.getItem('sf-p2-color')
+  if (!v) return 'none'
+  if (v === 'green' && !localStorage.getItem('sf-p2-migrated')) {
+    localStorage.setItem('sf-p2-color', 'none')
+    localStorage.setItem('sf-p2-migrated', '1')
+    return 'none'
+  }
+  return v
+})()
 export let currentMode = localStorage.getItem('sf-mode') || 'dark';
 
 export const startScreen   = $('start-screen');
