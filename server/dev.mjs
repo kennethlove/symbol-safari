@@ -58,7 +58,7 @@ function createRoom() {
   rooms.set(code, {
     players: [],
     seed: null, cells: [], avail: [], target: null,
-    turnMs: 0, running: false, shared: 60, found: 0, pid: 0,
+    turnMs: 0, running: false, shared: 60, found: 0, pid: 0, turnNum: 0,
     phase: 'waiting', timer: null,
   })
   return code
@@ -103,7 +103,7 @@ function startGame(room) {
 function startTurn(room) {
   const s = room
   if (s.avail.length === 0) { endGame(room); return }
-  const seedInt = Math.floor((s.seed + s.found + s.pid) * 2147483647) % 2147483647
+  const seedInt = Math.floor((s.seed + ++s.turnNum) * 2147483647)
   const rand = mulberry32(seedInt)
   const idx = Math.floor(rand() * s.avail.length)
   s.target = s.avail[idx]
