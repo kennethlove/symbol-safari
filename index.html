@@ -1,6 +1,6 @@
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head><script data-od-sandbox-shim>(function(){
   function makeStore(){
     var data = {};
@@ -30,6 +30,14 @@
 <title>Symbol Finder</title>
 <style>
 :root {
+  --accent-h: 260;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono-symbol: 'SF Mono', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', ui-monospace, monospace;
+}
+
+[data-theme="dark"] {
   --bg:        oklch(12% 0.004 250);
   --surface:   oklch(17% 0.006 250);
   --fg:        oklch(94% 0.002 250);
@@ -41,9 +49,24 @@
   --found:     oklch(65% 0.18 145);
   --found-bg:  oklch(65% 0.18 145 / 0.08);
   --wrong:     oklch(60% 0.22 25);
-  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
-  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --card-bg:   oklch(15% 0.006 250);
+  --card-hover: oklch(20% 0.008 255);
+}
+
+[data-theme="light"] {
+  --bg:        oklch(96% 0.005 240);
+  --surface:   oklch(100% 0 0);
+  --fg:        oklch(18% 0.012 250);
+  --muted:     oklch(48% 0.008 250);
+  --border:    oklch(88% 0.005 240);
+  --accent:    oklch(55% 0.22 260);
+  --accent-dim: oklch(55% 0.22 260 / 0.12);
+  --accent-glow: oklch(55% 0.22 260 / 0.2);
+  --found:     oklch(50% 0.22 145);
+  --found-bg:  oklch(50% 0.22 145 / 0.1);
+  --wrong:     oklch(55% 0.25 25);
+  --card-bg:   oklch(98% 0.003 240);
+  --card-hover: oklch(95% 0.005 245);
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -153,6 +176,101 @@ html, body {
 .primary-btn:hover { opacity: 0.85; transform: scale(1.03); }
 .primary-btn:active { transform: scale(0.97); }
 
+/* ─── Symbol Pack Cards ─── */
+.pack-picker {
+  display: flex; gap: 12px;
+  flex-wrap: wrap; justify-content: center;
+}
+
+.pack-card {
+  width: 182px; height: 200px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: border-color 0.15s, background 0.12s;
+}
+
+.pack-card:hover { background: var(--card-hover); }
+.pack-card.selected { border-color: var(--accent); }
+
+.pack-card .pc-name {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 600; line-height: 1.2;
+}
+
+.pack-card .pc-desc {
+  font-size: 10px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.pack-card .pc-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 2px; width: 100%; flex: 1;
+}
+
+.pack-card .pc-cell {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600;
+  color: var(--fg);
+  background: var(--surface);
+}
+
+/* ─── Theme Picker ─── */
+.settings-row {
+  display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap; justify-content: center;
+}
+
+.swatch-row {
+  display: flex; gap: 8px; align-items: center;
+}
+
+.swatch-row label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--muted);
+}
+
+.swatch {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.1s;
+}
+
+.swatch:hover { transform: scale(1.15); }
+.swatch.selected { border-color: var(--fg); }
+
+.mode-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mode-toggle button {
+  padding: 5px 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.mode-toggle button.active {
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+}
+
 .player-inputs { display: flex; gap: 14px; width: 100%; max-width: 360px; }
 
 .input-group {
@@ -216,7 +334,7 @@ html, body {
 #hud {
   position: absolute;
   top: 0; left: 0; right: 0;
-  z-index: 5;
+  z-index: 25;
   display: flex; align-items: flex-start;
   padding: 14px 24px;
   pointer-events: none;
@@ -227,20 +345,12 @@ html, body {
 .hud-right { text-align: right; }
 
 #timer-block {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center;
 }
 #timer-ring-svg { flex-shrink: 0; }
-#shared-timer {
-  font-family: var(--font-mono);
-  font-size: 30px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  transition: color 0.3s;
-}
+#timer-ring-fill { transition: stroke-dashoffset 0.3s linear; }
 
-#shared-timer.urgent { color: var(--wrong); animation: timerShake 0.3s ease-in-out infinite; }
-
+#shared-timer.urgent { animation: timerShake 0.3s ease-in-out infinite; }
 @keyframes timerShake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-2px); }
@@ -293,7 +403,7 @@ html, body {
 }
 
 #target-number {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono-symbol);
   font-size: 60px;
   font-weight: 700;
   line-height: 1;
@@ -329,21 +439,61 @@ html, body {
 
 #timer-bar-fill.urgent { background: var(--wrong); }
 
-#bottom-bar {
+/* ─── Bottom stats ─── */
+
+.bottom-stats {
   position: absolute; bottom: 0; left: 0; right: 0;
   z-index: 5;
-  display: flex; justify-content: center; gap: 40px;
-  padding: 10px 24px 16px;
+  padding: 8px 24px 14px;
   pointer-events: none;
+}
+
+#solo-stats {
+  display: flex; justify-content: center; gap: 40px;
 }
 
 .b-stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .b-stat .bs-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 .b-stat .bs-value {
-  font-family: var(--font-mono); font-size: 16px; font-weight: 600;
+  font-family: var(--font-mono); font-size: 17px; font-weight: 600;
   font-variant-numeric: tabular-nums; line-height: 1.2;
+  color: var(--fg);
 }
-.b-stat .bs-value.found-col { color: var(--found); }
+
+#pvp-stats {
+  display: flex; justify-content: center; align-items: stretch; gap: 24px;
+}
+
+.pvp-side {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 140px;
+}
+
+.pvp-side.active-turn {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--surface), var(--accent) 6%);
+}
+.pvp-side.active-turn.is-p2 { border-color: var(--found); }
+
+.pvp-name {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.pvp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+.pvp-label { color: var(--muted); }
+.pvp-val { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.pvp-vs {
+  display: flex; align-items: center;
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted);
+}
 
 /* ─── Turn overlay ─── */
 
@@ -381,7 +531,7 @@ html, body {
 #turn-overlay .to-player { font-family: var(--font-display); font-size: 26px; font-weight: 600; }
 #turn-overlay .to-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
 #to-preview-num {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono-symbol);
   font-size: 72px;
   font-weight: 700;
   color: var(--accent);
@@ -391,6 +541,8 @@ html, body {
   display: none;
 }
 #to-preview-num.show { display: block; animation: numDrop 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+
 
 @keyframes numDrop {
   0% { transform: translateY(-30px) scale(0.6); opacity: 0; }
@@ -454,7 +606,9 @@ html, body {
   #hud { padding: 10px 14px; }
   #target-number { font-size: 42px; }
   #shared-timer { font-size: 22px; }
-  #bottom-bar { gap: 20px; }
+  #solo-stats { gap: 20px; }
+  #pvp-stats { gap: 12px; }
+  .pvp-side { min-width: 100px; padding: 8px 14px; }
   #timer-ring-svg { width: 32px; height: 32px; }
   #results-grid { flex-direction: column; }
 }
@@ -472,19 +626,36 @@ html, body {
       <button class="mode-btn selected" data-mode="solo">Solo</button>
       <button class="mode-btn" data-mode="pvp">1 vs 1</button>
     </div>
-    <div class="player-inputs">
-      <div class="input-group">
-        <label>Player 1</label>
-        <input type="text" id="p1-name" value="Player 1" maxlength="20">
+    <div class="pack-picker" id="pack-picker"></div>
+    <div class="settings-row">
+      <div class="player-inputs">
+        <div class="input-group">
+          <label>Player 1</label>
+          <input type="text" id="p1-name" value="Player 1" maxlength="20">
+        </div>
+        <div class="input-group" id="p2-input-group" style="display:none">
+          <label>Player 2</label>
+          <input type="text" id="p2-name" value="Player 2" maxlength="20">
+        </div>
       </div>
-      <div class="input-group" id="p2-input-group" style="display:none">
-        <label>Player 2</label>
-        <input type="text" id="p2-name" value="Player 2" maxlength="20">
+      <div class="input-group" style="align-items:center">
+        <label>Time</label>
+        <input type="number" id="time-limit" value="60" min="5" max="600" step="5" style="width:70px;text-align:center">
       </div>
     </div>
-    <div class="input-group" style="align-items:center">
-      <label>Time limit (seconds)</label>
-      <input type="number" id="time-limit" value="60" min="5" max="600" step="5">
+    <div class="settings-row">
+      <div class="swatch-row">
+        <label>Accent</label>
+        <div class="swatch" data-accent="blue" style="background:oklch(68% 0.2 260)"></div>
+        <div class="swatch" data-accent="green" style="background:oklch(65% 0.18 145)"></div>
+        <div class="swatch" data-accent="purple" style="background:oklch(62% 0.2 300)"></div>
+        <div class="swatch" data-accent="orange" style="background:oklch(65% 0.18 55)"></div>
+        <div class="swatch" data-accent="red" style="background:oklch(60% 0.2 25)"></div>
+      </div>
+      <div class="mode-toggle">
+        <button data-mode="dark" class="active">Dark</button>
+        <button data-mode="light">Light</button>
+      </div>
     </div>
     <button class="primary-btn" id="start-btn">Start</button>
   </div>
@@ -502,31 +673,47 @@ html, body {
       <div id="timer-block">
         <svg id="timer-ring-svg" width="44" height="44" viewBox="0 0 44 44">
           <circle cx="22" cy="22" r="19" fill="none" stroke="var(--border)" stroke-width="2.5"/>
-          <circle id="timer-ring-fill" cx="22" cy="22" r="19" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+          <circle id="timer-ring-fill" cx="22" cy="22" r="19" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="119.38" stroke-dashoffset="0"/>
+          <text id="timer-ring-text" x="22" y="22" text-anchor="middle" dominant-baseline="central" fill="var(--fg)" font-size="16" font-weight="700" font-family="var(--font-mono)">60</text>
         </svg>
-        <div id="shared-timer">60</div>
       </div>
     </div>
     <div class="hud-section hud-center">
       <div id="target-block">
-        <span class="t-label">Find</span>
+        <span class="t-label" id="pack-name-label">Find</span>
         <div id="target-number">—</div>
         <div id="personal-timer">0.0s</div>
       </div>
     </div>
-    <div class="hud-section hud-right">
+    <div class="hud-section hud-right" style="display:flex;align-items:flex-end;gap:6px;flex-direction:column">
       <div class="t-label">Turn</div>
-      <div>
+      <div style="display:flex;align-items:center;gap:6px">
         <span id="player-badge" class="is-p1">Player 1</span>
-        <button id="hud-skip-btn" style="display:none">Skip (+3s)</button>
+        <button id="hud-skip-btn" style="display:none">Skip</button>
       </div>
     </div>
   </div>
 
-  <div id="bottom-bar">
-    <div class="b-stat"><span class="bs-label">Found</span><span class="bs-value found-col" id="found-count">0/—</span></div>
-    <div class="b-stat"><span class="bs-label">Best</span><span class="bs-value" id="best-time">—</span></div>
-    <div class="b-stat"><span class="bs-label">Last</span><span class="bs-value" id="last-time">—</span></div>
+  <div id="solo-stats" class="bottom-stats">
+    <div class="b-stat"><span class="bs-label">Found</span><span class="bs-value" id="solo-found">0 / —</span></div>
+    <div class="b-stat"><span class="bs-label">Skips</span><span class="bs-value" id="solo-skips">0 / 5</span></div>
+    <div class="b-stat"><span class="bs-label">Remaining</span><span class="bs-value" id="solo-remaining">—</span></div>
+  </div>
+
+  <div id="pvp-stats" class="bottom-stats" style="display:none">
+    <div class="pvp-side" id="pvp-side-0">
+      <span class="pvp-name" id="pvp-name-0">Player 1</span>
+      <div class="pvp-row"><span class="pvp-label">Found</span><span class="pvp-val" id="pvp-found-0">0</span></div>
+      <div class="pvp-row"><span class="pvp-label">Skips</span><span class="pvp-val" id="pvp-skips-0">3 / 3</span></div>
+      <div class="pvp-row"><span class="pvp-label">Time</span><span class="pvp-val" id="pvp-time-0">0.0s</span></div>
+    </div>
+    <div class="pvp-vs">vs</div>
+    <div class="pvp-side" id="pvp-side-1">
+      <span class="pvp-name" id="pvp-name-1">Player 2</span>
+      <div class="pvp-row"><span class="pvp-label">Found</span><span class="pvp-val" id="pvp-found-1">0</span></div>
+      <div class="pvp-row"><span class="pvp-label">Skips</span><span class="pvp-val" id="pvp-skips-1">3 / 3</span></div>
+      <div class="pvp-row"><span class="pvp-label">Time</span><span class="pvp-val" id="pvp-time-1">0.0s</span></div>
+    </div>
   </div>
 
   <div id="turn-overlay">
@@ -555,8 +742,50 @@ html, body {
 'use strict';
 
 const NUM_MIN = 10, NUM_MAX = 99;
+const MAX_SKIPS_SOLO = 5;
+const MAX_SKIPS_PVP = 3;
+
+const SYMBOL_PACKS = {
+  numbers: {
+    id: 'numbers', name: 'Numbers', cells: 90, desc: '10–99',
+    symbols: [],
+    font: 'var(--font-mono)',
+    makePreview: () => ['14','67','38','92','51','26','73','45','89']
+  },
+  cjkEasy: {
+    id: 'cjkEasy', name: 'CJK Easy', cells: 60, desc: '60 symbols',
+    symbols: ['一','二','三','人','大','口','十','上','下','山','水','火','日','月','土','木','白','中','力','女','子','王','天','手','目','田','石','千','川','工','明','好','生','花','金','雨','星','年','家','音','心','風','林','足','道','時','気','食','車','青','赤','空','海','岩','町','店','茶','豆','竹','森'],
+    font: 'var(--font-mono-symbol)',
+    makePreview: () => ['一','二','三','人','大','口','水','火','日','月']
+  },
+  cjkMedium: {
+    id: 'cjkMedium', name: 'CJK Medium', cells: 60, desc: '60 symbols',
+    symbols: ['魚','鳥','語','楽','読','書','聞','話','帰','間','顔','声','絵','数','曜','雑','難','機','飯','色','船','建','園','鳴','薬','電','校','真','夢','銀','雲','前','週','毎','品','回','発','物','考','高','最','新','作','入','出','行','見','言','立','長','玉','糸','村','花','雨','船','港','公','園'],
+    font: 'var(--font-mono-symbol)',
+    makePreview: () => ['魚','鳥','語','楽','読','書','聞','話','顔','声']
+  },
+  cjkHard: {
+    id: 'cjkHard', name: 'CJK Hard', cells: 60, desc: '60 symbols',
+    symbols: ['議','競','職','織','驚','鑑','護','権','観','闘','臓','臨','覧','療','懸','譲','襲','躍','露','警','爆','壊','顕','鷹','鱗','鬱','麟','驥','鱸','魔','鬼','魂','霊','闇','雲','霧','霜','雷','震','雫','氷','凛','響','躍','露','警','爆','壊','顕','鷹','鱗','鬱','麟','驥','鱸','魔','鬼','魂'],
+    font: 'var(--font-mono-symbol)',
+    makePreview: () => ['議','競','職','驚','鑑','護','闘','臓','鬱','麟']
+  }
+};
+
+const THEMES = {
+  accent: {
+    blue:  'oklch(68% 0.2 260)',
+    green: 'oklch(65% 0.18 145)',
+    purple: 'oklch(62% 0.2 300)',
+    orange: 'oklch(65% 0.18 55)',
+    red:   'oklch(60% 0.2 25)'
+  },
+  mode: { light: 'light', dark: 'dark' }
+};
+let currentAccent = localStorage.getItem('sf-accent') || 'blue';
+let currentMode = localStorage.getItem('sf-mode') || 'dark';
+let currentPackId = localStorage.getItem('sf-pack') || 'numbers';
 let gameDuration = 60;
-const SKIP_PEN = 3;
 
 const $ = id => document.getElementById(id);
 
@@ -579,15 +808,23 @@ const ctx           = canvas.getContext('2d');
 const fxCanvas      = $('fx-canvas');
 const fxCtx         = fxCanvas.getContext('2d');
 const startBtn      = $('start-btn');
-const sharedTimerEl = $('shared-timer');
 const timerBarFill  = $('timer-bar-fill');
 const timerRingFill = $('timer-ring-fill');
+const timerRingText = $('timer-ring-text');
 const targetNumEl   = $('target-number');
+const packNameLabel = $('pack-name-label');
 const personalTimerEl = $('personal-timer');
 const playerBadge   = $('player-badge');
-const foundCountEl  = $('found-count');
-const bestTimeEl    = $('best-time');
-const lastTimeEl    = $('last-time');
+const soloFoundEl   = $('solo-found');
+const soloSkipsEl   = $('solo-skips');
+const soloRemainEl  = $('solo-remaining');
+const soloStats     = $('solo-stats');
+const pvpStats      = $('pvp-stats');
+const pvpName       = [ $('pvp-name-0'), $('pvp-name-1') ];
+const pvpFound      = [ $('pvp-found-0'), $('pvp-found-1') ];
+const pvpSkips      = [ $('pvp-skips-0'), $('pvp-skips-1') ];
+const pvpTime       = [ $('pvp-time-0'), $('pvp-time-1') ];
+const pvpSide       = [ $('pvp-side-0'), $('pvp-side-1') ];
 const winnerText    = $('winner-text');
 const winnerSub     = $('winner-sub');
 const resultsGrid   = $('results-grid');
@@ -604,6 +841,64 @@ const p1NameInput   = $('p1-name');
 const p2NameInput   = $('p2-name');
 const p2InputGroup  = $('p2-input-group');
 const timeLimitInput = $('time-limit');
+const packPicker      = $('pack-picker');
+let selectedPackId    = localStorage.getItem('sf-pack') || 'numbers';
+
+function applyAccent(id) {
+  const c = THEMES.accent[id];
+  if (!c) return;
+  document.documentElement.style.setProperty('--accent', c);
+  const hslMatch = c.match(/oklch\([^)]+\)/);
+  if (hslMatch) {
+    const dim = hslMatch[0].replace(')', ' / 0.15)');
+    const glow = hslMatch[0].replace(')', ' / 0.35)');
+    document.documentElement.style.setProperty('--accent-dim', dim);
+    document.documentElement.style.setProperty('--accent-glow', glow);
+  }
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.dataset.accent === id));
+  currentAccent = id;
+  localStorage.setItem('sf-accent', id);
+}
+
+function applyMode(m) {
+  document.documentElement.setAttribute('data-theme', m);
+  document.querySelectorAll('.mode-toggle button').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  currentMode = m;
+  localStorage.setItem('sf-mode', m);
+}
+
+function initPackPicker() {
+  packPicker.innerHTML = '';
+  const ids = Object.keys(SYMBOL_PACKS);
+  ids.forEach(id => {
+    const p = SYMBOL_PACKS[id];
+    const card = document.createElement('div');
+    card.className = 'pack-card' + (id === selectedPackId ? ' selected' : '');
+    card.dataset.pack = id;
+    const pre = p.makePreview();
+    card.innerHTML = `<div class="pc-name">${p.name}</div>
+      <div class="pc-desc">${p.desc} · ${p.cells} cells</div>
+      <div class="pc-grid">${pre.map(s => `<div class="pc-cell">${s}</div>`).join('')}</div>`;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.pack-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedPackId = id;
+      localStorage.setItem('sf-pack', id);
+    });
+    packPicker.appendChild(card);
+  });
+}
+
+function initThemeUI() {
+  applyAccent(currentAccent);
+  applyMode(currentMode);
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.addEventListener('click', () => applyAccent(s.dataset.accent));
+  });
+  document.querySelectorAll('.mode-toggle button').forEach(b => {
+    b.addEventListener('click', () => applyMode(b.dataset.mode));
+  });
+}
 
 // ── Geometry ──
 function d2(a, b) { return (a.x-b.x)**2 + (a.y-b.y)**2; }
@@ -694,16 +989,43 @@ function clip(poly, x, y, w, h) {
   return out;
 }
 
-function genSites(count, w, h, minDist) {
+function genSites(count, w, h, minDist, pad) {
+  pad = pad || 48;
   const pts = [];
   let tries = 0;
   while (pts.length < count && tries < count * 80) {
     tries++;
-    const p = { x: 20 + Math.random() * (w - 40), y: 20 + Math.random() * (h - 40) };
+    const p = { x: pad + Math.random() * (w - pad*2), y: pad + Math.random() * (h - pad*2) };
     if (pts.some(q => d2(p, q) < minDist * minDist)) continue;
     pts.push(p);
   }
   return pts;
+}
+
+function polyArea(verts) {
+  let a = 0;
+  for (let i = 0; i < verts.length; i++) {
+    const j = (i + 1) % verts.length;
+    a += verts[i].x * verts[j].y;
+    a -= verts[j].x * verts[i].y;
+  }
+  return Math.abs(a) / 2;
+}
+
+function minEdgeDist(px, py, verts) {
+  let minD = Infinity;
+  for (let i = 0; i < verts.length; i++) {
+    const j = (i + 1) % verts.length;
+    const ax = verts[i].x, ay = verts[i].y;
+    const bx = verts[j].x, by = verts[j].y;
+    const abx = bx - ax, aby = by - ay;
+    const len2 = abx*abx + aby*aby;
+    let t = ((px - ax)*abx + (py - ay)*aby) / (len2 || 1);
+    t = Math.max(0, Math.min(1, t));
+    const d = Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
+    if (d < minD) minD = d;
+  }
+  return minD;
 }
 
 function pip(px, py, verts) {
@@ -717,6 +1039,7 @@ function pip(px, py, verts) {
 
 // ── Canvas sizing ──
 let cW = 0, cH = 0;
+let lastStarter = -1; // -1 means no game played yet
 
 function resize() {
   if (!playField) return;
@@ -752,20 +1075,36 @@ const G = {
   mode: 'solo', phase: 'idle',
   cells: [], avail: [], target: null,
   players: [{ n: 'Player 1', t: 0, finds: [], skips: 0 }, { n: 'Player 2', t: 0, finds: [], skips: 0 }],
-  pid: 0, shared: 60, turnMs: 0, running: false, turnStart: 0, turnSharedStart: 0,
+  pid: 0, shared: 60, turnMs: 0, running: false,
   found: 0, best: Infinity, last: null, lt: 0, time: 0,
   fx: [],
 };
 
 function cur() { return G.players[G.pid]; }
+function maxSkips() { return G.mode === 'solo' ? MAX_SKIPS_SOLO : MAX_SKIPS_PVP; }
 
-function genV(w, h) {
+function genGhosts(pad, w, h) {
+  const gs = [];
+  const n = Math.max(4, Math.ceil(Math.max(w, h) / (pad * 3)));
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    gs.push({ x: t * w, y: -pad }, { x: t * w, y: h + pad });
+  }
+  for (let i = 1; i < n - 1; i++) {
+    const t = i / (n - 1);
+    gs.push({ x: -pad, y: t * h }, { x: w + pad, y: t * h });
+  }
+  return gs;
+}
+
+function genV(w, h, count) {
   if (w < 100 || h < 100) return [];
-  const n = NUM_MAX - NUM_MIN + 1;
+  const pad = 48;
   const md = Math.min(w, h) / 13;
-  const sites = genSites(n, w, h, md);
+  const sites = genSites(count || 90, w, h, md, pad);
+  const ghosts = genGhosts(pad, w, h);
   const m = Math.max(w, h) * 1.5, cx = w / 2, cy = h / 2;
-  const all = [...sites,
+  const all = [...sites, ...ghosts,
     { x: cx - m, y: cy - m }, { x: cx, y: cy - m }, { x: cx + m, y: cy - m },
     { x: cx - m, y: cy }, { x: cx + m, y: cy },
     { x: cx - m, y: cy + m }, { x: cx, y: cy + m }, { x: cx + m, y: cy + m }
@@ -774,35 +1113,57 @@ function genV(w, h) {
 }
 
 function setup() {
-  const cells = genV(cW, cH);
-  const nums = [];
-  for (let n = NUM_MIN; n <= NUM_MAX; n++) nums.push(n);
-  for (let i = nums.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [nums[i], nums[j]] = [nums[j], nums[i]]; }
+  const pack = SYMBOL_PACKS[selectedPackId] || SYMBOL_PACKS.numbers;
+  const cellCount = pack.cells;
+  const symbols = pack.id === 'numbers'
+    ? (() => { const s = []; for (let n = NUM_MIN; n <= NUM_MAX; n++) s.push(String(n)); return s; })()
+    : [...pack.symbols];
+  for (let i = symbols.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [symbols[i], symbols[j]] = [symbols[j], symbols[i]]; }
 
+  const cells = genV(cW, cH, cellCount);
   if (cells.length === 0) { show(startScreen); return; }
-  const ac = Math.min(cells.length, nums.length);
+  const ac = Math.min(cells.length, symbols.length);
   G.cells = cells.slice(0, ac);
   G.fx = [];
   const cx = cW / 2, cy = cH / 2;
   let maxD = 0;
   for (let i = 0; i < ac; i++) {
     const c = G.cells[i];
-    c.num = nums[i]; c.found = false; c.hover = false; c.fb = -1;
+    c.num = symbols[i]; c.found = false; c.hover = false; c.fb = -1;
     c.d = Math.hypot(c.site.x - cx, c.site.y - cy);
     if (c.d > maxD) maxD = c.d;
     c.pa = Math.atan2(c.site.y - cy, c.site.x - cx);
+    c.area = polyArea(c.vertices);
+    c.minEdge = minEdgeDist(c.site.x, c.site.y, c.vertices);
   }
   for (const c of G.cells) c.nd = maxD > 0 ? c.d / maxD : 0;
-  G.avail = nums.slice(0, ac);
+  const radii = cells.map(c => c.minEdge).sort((a, b) => a - b);
+  G.globalFontSize = Math.max(20, Math.min(46,
+    radii[Math.max(0, Math.floor(radii.length * 0.3))] * 1.6
+  ));
+  const fontVar = pack.font.match(/--[\w-]+/);
+  G.packFont = fontVar ? (getComputedStyle(document.documentElement).getPropertyValue(fontVar[0]).trim() || FONT_MONO) : FONT_MONO;
+  G.avail = symbols.slice(0, ac);
   G.found = 0; G.best = Infinity; G.last = null;
-  G.target = null; G.pid = 0; G.turnMs = 0;
+  G.target = null; G.turnMs = 0;
   G.running = false; G.shared = gameDuration; G.lt = 0; G.time = 0;
+  if (G.mode === 'pvp') {
+    G.pid = (lastStarter + 1) % G.players.length;
+    lastStarter = G.pid;
+    soloStats.style.display = 'none';
+    pvpStats.style.display = 'flex';
+  } else {
+    G.pid = 0;
+    soloStats.style.display = 'flex';
+    pvpStats.style.display = 'none';
+  }
 
   for (const p of G.players) { p.t = 0; p.finds = []; p.skips = 0; }
 
   targetNumEl.textContent = '\u2014'; targetNumEl.style.color = '';
+  packNameLabel.textContent = pack.name;
   personalTimerEl.textContent = '0.0s';
-  sharedTimerEl.textContent = String(gameDuration); sharedTimerEl.classList.remove('urgent');
+  timerRingText.textContent = String(gameDuration);
   timerBarFill.style.width = '100%'; timerBarFill.className = '';
   const circ = 2 * Math.PI * 19;
   timerRingFill.style.stroke = ACCENT;
@@ -895,8 +1256,7 @@ function tickFX(dt) {
 // ── Turn mgmt ──
 function startTurn() {
   if (G.phase !== 'playing' || G.avail.length === 0) return;
-  G.turnMs = 0; G.running = true; G.turnStart = performance.now();
-  G.turnSharedStart = G.shared;
+  G.turnMs = 0; G.running = true;
   targetNumEl.textContent = String(G.target);
   targetNumEl.style.color = '';
   targetNumEl.classList.add('pop');
@@ -905,7 +1265,9 @@ function startTurn() {
   const p = cur();
   playerBadge.textContent = p.n;
   playerBadge.className = 'is-' + (G.pid === 0 ? 'p1' : 'p2');
-  hudSkipBtn.style.display = 'inline-block';
+  const skipsLeft = maxSkips() - p.skips;
+  hudSkipBtn.textContent = skipsLeft > 0 ? `Skip (${skipsLeft})` : 'Skip';
+  hudSkipBtn.style.display = skipsLeft > 0 ? 'inline-block' : 'none';
   updateStats(); render();
 }
 
@@ -913,20 +1275,24 @@ function completeTurn() {
   G.running = false; hudSkipBtn.style.display = 'none';
   if (G.phase !== 'playing') return;
   if (G.avail.length === 0 || G.shared <= 0) { endGame(); return; }
-  G.pid = (G.pid + 1) % G.players.length;
+  if (G.mode === 'pvp') G.pid = (G.pid + 1) % G.players.length;
   showTurnReady();
 }
 
 function showTurnReady() {
   G.phase = 'ready';
-  const p = cur();
-  const idx = Math.floor(Math.random() * G.avail.length);
-  G.target = G.avail[idx];
   targetNumEl.textContent = '\u2014';
-  personalTimerEl.textContent = '';
-  hudSkipBtn.style.display = 'none';
+  if (G.avail.length > 0) {
+    const idx = Math.floor(Math.random() * G.avail.length);
+    G.target = G.avail[idx];
+  } else {
+    G.target = null;
+    endGame();
+    return;
+  }
+  const p = cur();
   toPlayerText.textContent = p.n;
-  toSubText.textContent = 'Find the number';
+  toSubText.textContent = 'Find the symbol';
   toPreviewNum.textContent = String(G.target);
   toPreviewNum.className = 'to-num show';
   goBtn.style.display = 'inline-block';
@@ -936,20 +1302,20 @@ function showTurnReady() {
 function handleFind(cell) {
   if (G.phase !== 'playing' || !G.running || G.target === null) return;
   if (cell.num !== G.target) return;
-  const turnDelta = G.turnSharedStart - G.shared;
+  const elapsed = G.turnMs / 1000;
   G.running = false;
   const p = cur();
-  p.t += turnDelta; p.finds.push({ num: cell.num, time: turnDelta });
+  p.t += elapsed; p.finds.push({ num: cell.num, time: elapsed });
   hudSkipBtn.style.display = 'none';
   G.avail = G.avail.filter(n => n !== cell.num);
-  G.found++; G.last = turnDelta * 1000;
-  if (turnDelta < G.best / 1000) G.best = turnDelta * 1000;
+  G.found++; G.last = elapsed * 1000;
+  if (elapsed < G.best / 1000) G.best = elapsed * 1000;
   cell.found = true; cell.fb = G.pid;
 
   spawnFX(cell.site.x, cell.site.y, 'find');
 
-  const fsz2 = Math.max(12, Math.min(40, Math.sqrt((cW * cH) / Math.max(G.cells.length, 1)) * 0.25));
-  G.fx.push({ kind: 'text', x: cell.site.x, y: cell.site.y - 18, txt: turnDelta.toFixed(1) + 's', font: `700 ${fsz2}px ${FONT_MONO}`, color: ACCENT, life: 1 });
+  const fsz2 = Math.max(14, Math.min(36, (G.globalFontSize || 28) * 0.5));
+  G.fx.push({ kind: 'text', x: cell.site.x, y: cell.site.y - 18, txt: elapsed.toFixed(1) + 's', font: `700 ${fsz2}px ${FONT_MONO}`, color: ACCENT, life: 1 });
 
   updateStats(); render();
   targetNumEl.style.color = cv('found');
@@ -964,21 +1330,18 @@ function flashWrong(cell) {
 
 function handleSkip() {
   if (G.phase !== 'playing' || !G.running) return;
-  const turnDelta = G.turnSharedStart - G.shared;
-  G.running = false;
   const p = cur();
-  p.t += turnDelta + SKIP_PEN; p.skips++;
-  G.last = null; hudSkipBtn.style.display = 'none';
+  if (p.skips >= maxSkips()) return;
+  G.running = false;
+  p.skips++; G.last = null;
+  hudSkipBtn.style.display = 'none';
   updateStats();
   setTimeout(completeTurn, 100);
 }
 
 function endGame() {
   if (G.phase === 'result') return;
-  if (G.running) {
-    cur().t += G.turnSharedStart - G.shared;
-    G.running = false;
-  }
+  G.running = false;
   G.phase = 'result';
   targetNumEl.textContent = '\u2014'; targetNumEl.style.color = '';
   hudSkipBtn.style.display = 'none';
@@ -988,17 +1351,19 @@ function endGame() {
   gameScreen.classList.add('hidden');
   resultsScreen.classList.remove('hidden');
 
+  const pack = SYMBOL_PACKS[selectedPackId] || SYMBOL_PACKS.numbers;
+  const packLabel = pack.name + ' (' + pack.cells + ' cells)';
+
   if (G.mode === 'solo') {
     const p = G.players[0];
-    const totalPlayed = gameDuration;
     const avg = p.finds.length > 0 ? (p.t / p.finds.length) : 0;
     winnerText.textContent = 'Game Over';
-    winnerSub.textContent = `${totalPlayed.toFixed(1)}s · ${G.mode} · numbers ${NUM_MIN}–${NUM_MAX}`;
+    winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${packLabel}`;
     const xs = [];
     if (p.finds.length > 0) xs.push(`${avg.toFixed(2)}s avg`);
     if (p.skips > 0) xs.push(`${p.skips} skipped`);
     const estr = xs.length > 0 ? ' \u00b7 ' + xs.join(' \u00b7 ') : '';
-    resultsGrid.innerHTML = `<div class="r-card winner"><div class="rc-name">${p.n}</div><div class="rc-stat" style="color:var(--accent)">${p.finds.length} found · ${totalPlayed.toFixed(1)}s</div><div class="rc-sub">${p.finds.length} / ${G.cells.length} numbers${estr}</div></div>`;
+    resultsGrid.innerHTML = `<div class="r-card winner"><div class="rc-name">${p.n}</div><div class="rc-stat" style="color:var(--accent)">${G.found} found · ${p.t.toFixed(1)}s</div><div class="rc-sub">${G.found} / ${G.cells.length} symbols${estr}</div></div>`;
     resultBars.innerHTML = '';
   } else {
     const p1 = G.players[0], p2 = G.players[1];
@@ -1022,8 +1387,8 @@ function endGame() {
       if (avg > 0) pts.push(`${avg.toFixed(2)}s avg`);
       return `<div class="r-card${iw ? ' winner' : ''}"><div class="rc-name">${p.n}</div><div class="rc-stat">${p.finds.length} found · ${p.t.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`;
     };
-    if (tie) { winnerText.textContent = "It's a Tie!"; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${G.mode} · numbers ${NUM_MIN}–${NUM_MAX}`; }
-    else { winnerText.textContent = `${w.n} Wins!`; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${G.mode} · numbers ${NUM_MIN}–${NUM_MAX}`; }
+    if (tie) { winnerText.textContent = "It's a Tie!"; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${packLabel}`; }
+    else { winnerText.textContent = `${w.n} Wins!`; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${packLabel}`; }
     resultsGrid.innerHTML = card(p1, w === p1) + card(p2, w === p2);
   }
 }
@@ -1068,8 +1433,9 @@ function render() {
     ctx.closePath();
 
     if (cell.found) {
-      ctx.fillStyle = okh(0.08, 0.18, 145);
-    } else if (cell.wr > 0) {
+      continue;
+    }
+    if (cell.wr > 0) {
       ctx.fillStyle = okh(0.16, 0.25, 25);
     } else if (isHover) {
       ctx.fillStyle = ACCENT_DIM;
@@ -1079,11 +1445,7 @@ function render() {
     }
     ctx.fill();
 
-    if (cell.found) {
-      ctx.strokeStyle = okh(0.16, 0.18, 145);
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-    } else if (isHover) {
+    if (isHover) {
       ctx.save();
       ctx.shadowColor = ACCENT;
       ctx.shadowBlur = 15;
@@ -1099,8 +1461,7 @@ function render() {
     }
   }
 
-  const avgArea = (w * h) / Math.max(cells.length, 1);
-  const fsz = Math.max(14, Math.min(64, Math.sqrt(avgArea) * 0.40));
+  const cellFsz = G.globalFontSize || Math.max(22, Math.min(48, Math.sqrt((cW * cH) / cells.length) * 0.4));
 
   for (const cell of cells) {
     if (cell.num == null) continue;
@@ -1109,24 +1470,10 @@ function render() {
     const dx = cell.site.x - sx, dy = cell.site.y - sy;
     const spot = Math.max(0, 1 - (dx*dx + dy*dy) / maxD2);
 
-    if (cell.found) {
-      ctx.globalAlpha = 0.03 + 0.04 * Math.pow(spot, 2);
-      ctx.fillStyle = FOUND;
-      ctx.font = `500 ${fsz * 0.7}px ${FONT_MONO}`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(String(cell.num), cell.site.x, cell.site.y);
-      ctx.restore();
-      ctx.save();
-      ctx.globalAlpha = 0.2 + 0.3 * Math.pow(spot, 2);
-      ctx.fillStyle = FOUND;
-      ctx.beginPath();
-      ctx.arc(cell.site.x, cell.site.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      continue;
-    } else if (cell.wr > 0) {
+    if (cell.found) { ctx.restore(); continue; }
+    if (cell.wr > 0) {
       ctx.fillStyle = WRONG;
-      ctx.font = `700 ${fsz * 0.7}px ${FONT_MONO}`;
+      ctx.font = `700 ${Math.max(16, cellFsz * 0.6)}px ${FONT_MONO}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('\u2715', cell.site.x + 1, cell.site.y);
       ctx.restore();
@@ -1135,7 +1482,7 @@ function render() {
       ctx.globalAlpha = 0.15 + 0.85 * Math.pow(spot, 3);
       const nb = 42 + 55 * Math.pow(spot, 2);
       ctx.fillStyle = `oklch(${nb.toFixed(1)}% 0.015 ${260 + hueCycle})`;
-      ctx.font = `600 ${fsz}px ${FONT_MONO}`;
+      ctx.font = `600 ${cellFsz}px ${G.packFont || FONT_MONO}`;
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(String(cell.num), cell.site.x, cell.site.y);
@@ -1174,10 +1521,27 @@ canvas.addEventListener('mousedown', e => {
 });
 
 function updateStats() {
-  foundCountEl.textContent = `${G.found}/${G.cells.length}`;
-  if (G.best < Infinity) bestTimeEl.textContent = (G.best / 1000).toFixed(1) + 's';
-  if (G.last != null) lastTimeEl.textContent = (G.last / 1000).toFixed(1) + 's';
-  sharedTimerEl.textContent = String(Math.max(0, Math.ceil(G.shared)));
+  const remaining = G.avail.length;
+
+  if (G.mode === 'solo') {
+    soloFoundEl.textContent = `${G.found} / ${G.cells.length}`;
+    const skipsLeft = maxSkips() - G.players[0].skips;
+    soloSkipsEl.textContent = `${Math.max(0, skipsLeft)} / ${maxSkips()}`;
+    soloRemainEl.textContent = String(remaining);
+  } else {
+    for (let i = 0; i < 2; i++) {
+      const p = G.players[i];
+      const isActive = G.pid === i && G.phase === 'playing';
+      const skipsLeft = maxSkips() - p.skips;
+      pvpFound[i].textContent = String(p.finds.length);
+      pvpSkips[i].textContent = `${Math.max(0, skipsLeft)} / ${maxSkips()}`;
+      pvpTime[i].textContent = p.t.toFixed(1) + 's';
+      pvpName[i].textContent = p.n;
+      pvpSide[i].classList.toggle('active-turn', isActive);
+      pvpSide[i].classList.toggle('is-p2', i === 1);
+    }
+  }
+  timerRingText.textContent = String(Math.max(0, Math.ceil(G.shared)));
   const pct = G.shared / gameDuration;
   const circ = 2 * Math.PI * 19;
   timerRingFill.style.strokeDashoffset = String(circ * (1 - pct));
@@ -1188,14 +1552,16 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (G.phase === 'idle' || G.phase === 'result') { G.lt = 0; return; }
   if (G.lt === 0) { G.lt = now; return; }
-  const dt = Math.min((now - G.lt) / 1000, 0.05);
+  const dt = Math.min((now - G.lt) / 1000, gameDuration * 2);
   G.lt = now; G.time += dt;
 
-  if (G.phase === 'playing') G.shared -= dt;
+  if (G.phase !== 'ready') G.shared -= dt;
   if (G.shared <= 0) { G.shared = 0; updateStats(); if (G.phase === 'playing' || G.phase === 'ready') endGame(); return; }
 
-  sharedTimerEl.textContent = String(Math.ceil(G.shared));
-  sharedTimerEl.classList.toggle('urgent', G.shared < 10);
+  const ceilShared = String(Math.ceil(G.shared));
+  timerRingText.textContent = ceilShared;
+
+  timerRingFill.style.stroke = G.shared < 10 ? WRONG : ACCENT;
   timerBarFill.classList.toggle('urgent', G.shared < 10);
   timerRingFill.style.stroke = G.shared < 10 ? WRONG : ACCENT;
 
@@ -1247,9 +1613,11 @@ startBtn.addEventListener('click', () => {
 
 playAgainBtn.addEventListener('click', () => {
   resultsGrid.innerHTML = ''; resultBars.innerHTML = '';
+  winnerText.textContent = ''; winnerSub.textContent = '';
   turnOverlay.classList.remove('active');
   toPreviewNum.className = 'to-num';
   goBtn.style.display = 'none';
+  G.phase = 'idle';
   show(startScreen);
   resizeBg();
   initBg();
@@ -1348,6 +1716,8 @@ function drawBg(now) {
 show(startScreen);
 resizeBg();
 initBg();
+initPackPicker();
+initThemeUI();
 requestAnimationFrame(function bgLoop(now) {
   if (G.phase === 'idle') { bgTime = now / 1000; drawBg(now); }
   requestAnimationFrame(bgLoop);
