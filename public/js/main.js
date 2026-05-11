@@ -363,17 +363,17 @@ function handleMsg(msg) {
         if (fs[0]) fs[0].style.height = ((t1 / mx) * 100) + '%'
         if (fs[1]) fs[1].style.height = ((t2 / mx) * 100) + '%'
       }, 50)
-      const card = (stats, idx, iw) => {
+      const card = (stats, iw, hl) => {
         const cnt = stats.finds.length
         const t = stats.time / 1000
         const avg = cnt > 0 ? t / cnt : 0
         const pts = []
         if (stats.skips > 0) pts.push(`${stats.skips} skipped`)
         if (avg > 0) pts.push(`${avg.toFixed(2)}s avg`)
-        const wClass = iw ? (idx === 1 ? ' winner-p2' : ' winner') : ''
-        return `<div class="r-card${wClass}"><div class="rc-name">${stats.name}</div><div class="rc-stat">${cnt} found · ${t.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`
+        const wStyle = iw ? `border-color:${hl};background:color-mix(in srgb, ${hl} 10%, transparent)` : ''
+        return `<div class="r-card"${iw ? ` style="${wStyle}"` : ''}><div class="rc-name">${stats.name}</div><div class="rc-stat">${cnt} found · ${t.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`
       }
-      resultsGrid.innerHTML = card(p1s, 0, 0 === msg.winner) + card(p2s, 1, 1 === msg.winner)
+      resultsGrid.innerHTML = card(p1s, 0 === msg.winner, c1) + card(p2s, 1 === msg.winner, c2)
       gameScreen.classList.add('hidden')
       resultsScreen.classList.remove('hidden')
       break
