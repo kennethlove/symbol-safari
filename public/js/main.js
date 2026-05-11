@@ -348,24 +348,30 @@ function handleMsg(msg) {
         winnerText.textContent = 'You Lose'
       }
       winnerSub.textContent = `${gameDuration.toFixed(1)}s · Numbers (${G.cells.length} cells)`
-      const p1 = G.players[0], p2 = G.players[1]
       const p1s = msg.stats[0], p2s = msg.stats[1]
-      const mx = Math.max(p1s.time, p2s.time, 0.01)
+      const t1 = p1s.time / 1000, t2 = p2s.time / 1000
+      const mx = Math.max(t1, t2, 0.01)
+      const selfColor = 'var(--accent)'
+      const oppColor = 'oklch(55% 0 0)'
+      const c1 = onlinePlayerIndex === 0 ? selfColor : oppColor
+      const c2 = onlinePlayerIndex === 1 ? selfColor : oppColor
       resultBars.innerHTML = `
-        <div class="rb-group"><div class="rb-label" style="color:var(--accent)">${p1s.name}</div><div class="rb-track"><div class="rb-fill p1" style="height:0%"></div></div><div class="rb-val">${p1s.time.toFixed(1)}s</div></div>
-        <div class="rb-group"><div class="rb-label" style="color:var(--p2-color)">${p2s.name}</div><div class="rb-track"><div class="rb-fill p2" style="height:0%"></div></div><div class="rb-val">${p2s.time.toFixed(1)}s</div></div>`
+        <div class="rb-group"><div class="rb-label" style="color:${c1}">${p1s.name}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c1};border-radius:4px"></div></div><div class="rb-val">${t1.toFixed(1)}s</div></div>
+        <div class="rb-group"><div class="rb-label" style="color:${c2}">${p2s.name}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c2};border-radius:4px"></div></div><div class="rb-val">${t2.toFixed(1)}s</div></div>`
       setTimeout(() => {
         const fs = resultBars.querySelectorAll('.rb-fill')
-        if (fs[0]) fs[0].style.height = ((p1s.time / mx) * 100) + '%'
-        if (fs[1]) fs[1].style.height = ((p2s.time / mx) * 100) + '%'
+        if (fs[0]) fs[0].style.height = ((t1 / mx) * 100) + '%'
+        if (fs[1]) fs[1].style.height = ((t2 / mx) * 100) + '%'
       }, 50)
       const card = (stats, idx, iw) => {
-        const avg = stats.finds > 0 ? (stats.time / stats.finds) : 0
+        const cnt = stats.finds.length
+        const t = stats.time / 1000
+        const avg = cnt > 0 ? t / cnt : 0
         const pts = []
         if (stats.skips > 0) pts.push(`${stats.skips} skipped`)
         if (avg > 0) pts.push(`${avg.toFixed(2)}s avg`)
         const wClass = iw ? (idx === 1 ? ' winner-p2' : ' winner') : ''
-        return `<div class="r-card${wClass}"><div class="rc-name">${stats.name}</div><div class="rc-stat">${stats.finds} found · ${stats.time.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`
+        return `<div class="r-card${wClass}"><div class="rc-name">${stats.name}</div><div class="rc-stat">${cnt} found · ${t.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`
       }
       resultsGrid.innerHTML = card(p1s, 0, 0 === msg.winner) + card(p2s, 1, 1 === msg.winner)
       gameScreen.classList.add('hidden')
