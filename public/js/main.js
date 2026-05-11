@@ -20,6 +20,7 @@ import {
   copyCodeBtn, copyLinkBtn,
   showDisconnected, hideDisconnected,
   showOpponentDisconnected, hideOpponentDisconnected,
+  roomTimeDisplay, roomTimeValue,
 } from './ui.js';
 import { connect, send, disconnect, setServerHost, apiURL } from './network.js';
 
@@ -44,6 +45,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
       onlineActions.classList.remove('hidden');
       roomLobby.classList.add('hidden');
       joinFormEl.classList.add('hidden');
+      timeLimitInput.disabled = false;
     }
   });
 });
@@ -143,13 +145,15 @@ window.addEventListener('resize', () => {
 createRoomBtn.addEventListener('click', async () => {
   try {
     const name = p1NameInput.value.trim() || 'Player 1'
+    const timeLimit = parseInt(timeLimitInput.value, 10) || 60
     const res = await fetch(apiURL('/api/room'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name, timeLimit })
     })
     if (!res.ok) { setLobbyStatus('Server error'); return }
     const data = await res.json()
+    if (data.timeLimit) setGameDuration(data.timeLimit)
     onlinePlayerIndex = data.playerIndex
     G.players[onlinePlayerIndex].n = name
     showLobby(data.roomCode)
@@ -160,7 +164,11 @@ createRoomBtn.addEventListener('click', async () => {
   }
 })
 
-joinRoomBtn.addEventListener('click', () => showJoinForm())
+joinRoomBtn.addEventListener('click', () => {
+  showJoinForm()
+  timeLimitInput.disabled = true
+  fetchRoomInfo()
+})
 
 joinBtn.addEventListener('click', async () => {
   try {
@@ -176,6 +184,11 @@ joinBtn.addEventListener('click', async () => {
     const data = await res.json()
     onlinePlayerIndex = data.playerIndex
     G.players[onlinePlayerIndex].n = name
+    if (data.timeLimit) {
+      setGameDuration(data.timeLimit)
+      timeLimitInput.value = String(data.timeLimit)
+    }
+    timeLimitInput.disabled = true
     showLobby(code)
     updateStats(G)
     connect(code, data.playerIndex, handleMsg)
@@ -207,6 +220,21 @@ copyLinkBtn.addEventListener('click', async () => {
   } catch { /* fallback */ }
 })
 
+async function fetchRoomInfo(code) {
+  if (!code) code = getRoomCode()
+  if (!code) return
+  try {
+    const res = await fetch(apiURL(`/api/room/${code}`))
+    if (!res.ok) return
+    const data = await res.json()
+    if (data.timeLimit) {
+      roomTimeValue.textContent = String(data.timeLimit)
+      roomTimeDisplay.style.display = ''
+    }
+    return data
+  } catch { /* ignore */ }
+}
+
 function handleMsg(msg) {
   switch (msg.type) {
     case 'OPPONENT_PLAY_AGAIN':
@@ -234,6 +262,8 @@ function handleMsg(msg) {
       G.packFont = ''
       G.time = 0
       G.lt = 0
+
+      if (msg.timeLimit) setGameDuration(msg.timeLimit)
 
       document.querySelector('#pvp-stats').style.display = 'flex'
       document.querySelector('#solo-stats').style.display = 'none'
@@ -464,5 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (onlineBtn) onlineBtn.click()
     document.getElementById('room-code-input').value = roomParam
     showJoinForm()
+    timeLimitInput.disabled = true
+    fetchRoomInfo(roomParam)
   }
 });

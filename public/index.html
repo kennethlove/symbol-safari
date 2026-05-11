@@ -297,6 +297,13 @@ html, body {
   font-weight: 600;
 }
 
+#global-mode-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+}
+
 .player-inputs { display: flex; gap: 32px; width: 100%; max-width: 400px; justify-content: center; }
 
 .input-group {
@@ -638,6 +645,11 @@ html, body {
 <body>
 <div id="app">
 
+<div class="mode-toggle" id="global-mode-toggle">
+  <button data-mode="dark" class="active">Dark</button>
+  <button data-mode="light">Light</button>
+</div>
+
 <div id="start-screen" class="screen">
   <canvas id="bg-canvas"></canvas>
   <div class="content-wrap">
@@ -685,10 +697,6 @@ html, body {
         <label>Time</label>
         <input type="number" id="time-limit" value="60" min="5" max="600" step="5" style="width:70px;text-align:center">
       </div>
-      <div class="mode-toggle">
-        <button data-mode="dark" class="active">Dark</button>
-        <button data-mode="light">Light</button>
-      </div>
     </div>
     <div id="online-section" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:400px">
       <div id="online-actions" style="display:flex;gap:10px">
@@ -704,8 +712,9 @@ html, body {
         </div>
         <p id="lobby-status" style="font-size:13px;color:var(--muted)">Waiting for opponent...</p>
       </div>
-      <div id="join-form" class="hidden" style="display:flex;gap:8px">
+      <div id="join-form" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:8px">
         <input id="room-code-input" placeholder="Enter room code" maxlength="64" style="width:280px;text-align:center;font-family:var(--font-mono);font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--fg)">
+        <p id="room-time-display" style="font-size:13px;color:var(--muted);display:none">Game: <span id="room-time-value"></span>s</p>
         <button class="primary-btn" id="btn-join">Join</button>
       </div>
     </div>

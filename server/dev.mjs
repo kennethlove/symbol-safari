@@ -53,13 +53,13 @@ function generateCells(rand, count) {
   return cells
 }
 
-function createRoom() {
+function createRoom(timeLimit) {
   const code = randomUUID().slice(0, 8)
   rooms.set(code, {
     players: [],
     seed: null, cells: [], avail: [], target: null,
-    turnMs: 0, running: false, shared: 60, found: 0, pid: 0, turnNum: 0,
-    phase: 'waiting', timer: null, replay: [],
+    turnMs: 0, running: false, shared: timeLimit || 60, found: 0, pid: 0, turnNum: 0,
+    phase: 'waiting', timer: null, replay: [], timeLimit: timeLimit || 60,
   })
   return code
 }
@@ -81,7 +81,7 @@ function startGame(room) {
   const rand = mulberry32(seedInt)
   s.cells = generateCells(rand, SYMBOL_PACKS.numbers.count)
   s.avail = s.cells.map(c => c.num)
-  s.shared = 60
+  s.shared = s.timeLimit
   s.pid = 0
   s.found = 0
   s.running = false
@@ -96,7 +96,7 @@ function startGame(room) {
     if (p.ws && p.ws.readyState === 1) {
       p.ws.send(JSON.stringify({
         type: 'GAME_START', seed: s.seed, playerIndex: i, pid: i,
-        players: playersInfo, cells: cellsData, avail: s.avail, shared: s.shared,
+        players: playersInfo, cells: cellsData, avail: s.avail, shared: s.shared, timeLimit: s.timeLimit,
       }))
     }
   })
@@ -254,14 +254,24 @@ const server = http.createServer((req, res) => {
     let body = ''
     req.on('data', chunk => body += chunk)
     req.on('end', () => {
-      const { name } = JSON.parse(body || '{}')
-      const code = createRoom()
+      const { name, timeLimit } = JSON.parse(body || '{}')
+      const code = createRoom(timeLimit || 60)
       const room = rooms.get(code)
       room.players.push(makePlayer(name || 'Player 1'))
-      console.log(`[API] Room ${code} created by ${name}`)
+      console.log(`[API] Room ${code} created by ${name} (${timeLimit || 60}s)`)
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ roomCode: code, playerIndex: 0 }))
+      res.end(JSON.stringify({ roomCode: code, playerIndex: 0, timeLimit: room.timeLimit }))
     })
+    return
+  }
+
+  if (req.method === 'GET' && url.pathname.startsWith('/api/room/')) {
+    const parts = url.pathname.split('/')
+    const code = parts[3]
+    const room = rooms.get(code)
+    if (!room) { res.writeHead(404); res.end('Not found'); return }
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ timeLimit: room.timeLimit, players: room.players.length }))
     return
   }
 
@@ -282,7 +292,7 @@ const server = http.createServer((req, res) => {
       room.players.push(makePlayer(name || 'Player 2'))
       console.log(`[API] Room ${code} joined by ${name} (players: ${room.players.length})`)
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ roomCode: code, playerIndex: 1 }))
+      res.end(JSON.stringify({ roomCode: code, playerIndex: 1, timeLimit: room.timeLimit }))
     })
     return
   }
