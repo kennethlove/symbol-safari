@@ -184,6 +184,20 @@ html, body {
 .primary-btn:hover { opacity: 0.85; transform: scale(1.03); }
 .primary-btn:active { transform: scale(0.97); }
 
+.secondary-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.secondary-btn:hover { border-color: var(--accent); color: var(--fg); }
+.secondary-btn:active { transform: scale(0.97); }
+.secondary-btn.copied { border-color: var(--found); color: var(--found); }
+
 /* ─── Symbol Pack Cards ─── */
 .pack-picker {
   display: flex; gap: 12px;
@@ -638,7 +652,7 @@ html, body {
     <div class="settings-row">
       <div class="player-inputs">
         <div class="input-group">
-          <label>Player 1</label>
+          <label id="p1-name-label">Player 1</label>
           <input type="text" id="p1-name" value="Player 1" maxlength="20">
         </div>
         <div class="input-group" id="p2-input-group" style="display:none">
@@ -684,6 +698,10 @@ html, body {
       <div id="room-lobby" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:8px">
         <p style="font-size:14px;color:var(--muted)">Room code</p>
         <p id="room-code-display" style="font-family:var(--font-mono);font-size:28px;font-weight:700;letter-spacing:0.1em"></p>
+        <div style="display:flex;gap:8px;margin-top:2px">
+          <button class="secondary-btn" id="btn-copy-code">Copy Code</button>
+          <button class="secondary-btn" id="btn-copy-link">Copy Link</button>
+        </div>
         <p id="lobby-status" style="font-size:13px;color:var(--muted)">Waiting for opponent...</p>
       </div>
       <div id="join-form" class="hidden" style="display:flex;gap:8px">

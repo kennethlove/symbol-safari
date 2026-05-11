@@ -69,12 +69,13 @@ export function render(c, fx, G) {
 
     if (cell.found) {
       const isOpponent = G.mode !== 'online' ? cell.fb === 1 : cell.fb !== G.selfId
-      const fbColor = isOpponent ? P2_COLOR : ACCENT;
+      const isOnlineOpp = G.mode === 'online' && isOpponent
+      const fbColor = isOnlineOpp ? 'oklch(55% 0 0)' : (isOpponent ? P2_COLOR : ACCENT);
       c.save();
-      c.globalAlpha = 0.15;
+      c.globalAlpha = isOnlineOpp ? 0.08 : 0.15;
       c.fillStyle = fbColor;
       c.fill();
-      c.globalAlpha = 0.35;
+      c.globalAlpha = isOnlineOpp ? 0.2 : 0.35;
       c.strokeStyle = fbColor;
       c.lineWidth = 1.5;
       c.stroke();
@@ -118,8 +119,9 @@ export function render(c, fx, G) {
 
     if (cell.found) {
       const isOpponent = G.mode !== 'online' ? cell.fb === 1 : cell.fb !== G.selfId
-      const fbColor = isOpponent ? P2_COLOR : ACCENT;
-      c.globalAlpha = 0.5;
+      const isOnlineOpp = G.mode === 'online' && isOpponent
+      const fbColor = isOnlineOpp ? 'oklch(55% 0 0)' : (isOpponent ? P2_COLOR : ACCENT);
+      c.globalAlpha = isOnlineOpp ? 0.3 : 0.5;
       c.fillStyle = fbColor;
       c.font = `600 ${cellFsz * 0.65}px ${G.packFont || FONT_MONO}`;
       c.textAlign = 'center'; c.textBaseline = 'middle';

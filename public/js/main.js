@@ -17,6 +17,7 @@ import {
   showOnlineUI, onlineActions, roomLobby, joinFormEl,
   createRoomBtn, joinRoomBtn, joinBtn, roomCodeDisplay, lobbyStatus,
   showLobby, setLobbyStatus, showJoinForm, getRoomCode,
+  copyCodeBtn, copyLinkBtn,
   showDisconnected, hideDisconnected,
   showOpponentDisconnected, hideOpponentDisconnected,
 } from './ui.js';
@@ -31,9 +32,12 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     G.mode = btn.dataset.mode;
     p2InputGroup.style.display = G.mode === 'pvp' ? 'flex' : 'none';
     p2SwatchRow.style.display = G.mode === 'pvp' ? 'flex' : 'none';
+    document.getElementById('p1-name-label').textContent = G.mode === 'online' ? 'Your Name' : 'Player 1';
     if (G.mode === 'online') {
       showOnlineUI(true);
       startBtn.style.display = 'none';
+      document.querySelector('#pvp-stats').style.display = 'flex'
+      document.querySelector('#solo-stats').style.display = 'none'
     } else {
       showOnlineUI(false);
       startBtn.style.display = '';
@@ -141,7 +145,9 @@ createRoomBtn.addEventListener('click', async () => {
     if (!res.ok) { setLobbyStatus('Server error'); return }
     const data = await res.json()
     onlinePlayerIndex = data.playerIndex
+    G.players[onlinePlayerIndex].n = name
     showLobby(data.roomCode)
+    updateStats(G)
     connect(data.roomCode, data.playerIndex, handleMsg)
   } catch (e) {
     setLobbyStatus('Failed to create room')
@@ -163,11 +169,36 @@ joinBtn.addEventListener('click', async () => {
     if (!res.ok) { setLobbyStatus('Room not found or full'); return }
     const data = await res.json()
     onlinePlayerIndex = data.playerIndex
+    G.players[onlinePlayerIndex].n = name
     showLobby(code)
+    updateStats(G)
     connect(code, data.playerIndex, handleMsg)
   } catch (e) {
     setLobbyStatus('Failed to join room')
   }
+})
+
+copyCodeBtn.addEventListener('click', async () => {
+  const code = roomCodeDisplay.textContent
+  if (!code) return
+  try {
+    await navigator.clipboard.writeText(code)
+    copyCodeBtn.classList.add('copied')
+    copyCodeBtn.textContent = 'Copied!'
+    setTimeout(() => { copyCodeBtn.classList.remove('copied'); copyCodeBtn.textContent = 'Copy Code' }, 2000)
+  } catch { /* fallback: select the code text */ }
+})
+
+copyLinkBtn.addEventListener('click', async () => {
+  const code = roomCodeDisplay.textContent
+  if (!code) return
+  const link = window.location.origin + window.location.pathname.replace(/\/$/, '') + '?room=' + code
+  try {
+    await navigator.clipboard.writeText(link)
+    copyLinkBtn.classList.add('copied')
+    copyLinkBtn.textContent = 'Copied!'
+    setTimeout(() => { copyLinkBtn.classList.remove('copied'); copyLinkBtn.textContent = 'Copy Link' }, 2000)
+  } catch { /* fallback */ }
 })
 
 function handleMsg(msg) {
@@ -308,6 +339,7 @@ function handleMsg(msg) {
       updateStats(G)
       break
     case 'GAME_OVER': {
+      G.phase = 'result'; G.running = false;
       if (msg.winner === onlinePlayerIndex) {
         winnerText.textContent = 'You Win!'
       } else if (msg.winner === -1) {
@@ -373,7 +405,10 @@ function loop(now) {
   if (G.running) G.turnMs += dt * 1000;
 
   if (G.mode !== 'online' && G.phase !== 'ready') G.shared -= dt;
-  if (G.shared <= 0 && G.mode !== 'online') { G.shared = 0; updateStats(G); if (G.phase === 'playing' || G.phase === 'ready') endGame(); return; }
+  if (G.shared <= 0) {
+    G.shared = 0; updateStats(G);
+    if (G.phase === 'playing' || G.phase === 'ready') { endGame(); return; }
+  }
 
   timerRingText.textContent = G.shared.toFixed(1);
 
@@ -406,4 +441,12 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(bgLoop);
   });
   requestAnimationFrame(loop);
+
+  const roomParam = new URLSearchParams(window.location.search).get('room')
+  if (roomParam) {
+    const onlineBtn = document.querySelector('.mode-btn[data-mode="online"]')
+    if (onlineBtn) onlineBtn.click()
+    document.getElementById('room-code-input').value = roomParam
+    showJoinForm()
+  }
 });
