@@ -355,9 +355,12 @@ function handleMsg(msg) {
       const oppColor = 'oklch(55% 0 0)'
       const c1 = onlinePlayerIndex === 0 ? selfColor : oppColor
       const c2 = onlinePlayerIndex === 1 ? selfColor : oppColor
+      const star = '\u2605'
+      const s1 = 0 === msg.winner ? ' ' + star : ''
+      const s2 = 1 === msg.winner ? ' ' + star : ''
       resultBars.innerHTML = `
-        <div class="rb-group"><div class="rb-label" style="color:${c1}">${p1s.name}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c1};border-radius:4px"></div></div><div class="rb-val">${t1.toFixed(1)}s</div></div>
-        <div class="rb-group"><div class="rb-label" style="color:${c2}">${p2s.name}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c2};border-radius:4px"></div></div><div class="rb-val">${t2.toFixed(1)}s</div></div>`
+        <div class="rb-group"><div class="rb-label" style="color:${c1}">${p1s.name}${s1}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c1};border-radius:4px"></div></div><div class="rb-val">${t1.toFixed(1)}s</div></div>
+        <div class="rb-group"><div class="rb-label" style="color:${c2}">${p2s.name}${s2}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c2};border-radius:4px"></div></div><div class="rb-val">${t2.toFixed(1)}s</div></div>`
       setTimeout(() => {
         const fs = resultBars.querySelectorAll('.rb-fill')
         if (fs[0]) fs[0].style.height = ((t1 / mx) * 100) + '%'
