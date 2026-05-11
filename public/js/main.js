@@ -351,10 +351,10 @@ function handleMsg(msg) {
       const p1s = msg.stats[0], p2s = msg.stats[1]
       const t1 = p1s.time / 1000, t2 = p2s.time / 1000
       const mx = Math.max(t1, t2, 0.01)
-      const selfColor = 'var(--accent)'
-      const oppColor = 'oklch(55% 0 0)'
-      const c1 = onlinePlayerIndex === 0 ? selfColor : oppColor
-      const c2 = onlinePlayerIndex === 1 ? selfColor : oppColor
+      const winColor = 'var(--accent)'
+      const loseColor = 'oklch(55% 0 0)'
+      const c1 = msg.winner === 0 ? winColor : loseColor
+      const c2 = msg.winner === 1 ? winColor : loseColor
       const star = '\u2605'
       const s1 = 0 === msg.winner ? ' ' + star : ''
       const s2 = 1 === msg.winner ? ' ' + star : ''
