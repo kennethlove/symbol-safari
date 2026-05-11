@@ -67,6 +67,12 @@ startBtn.addEventListener('click', () => {
 });
 
 playAgainBtn.addEventListener('click', () => {
+  if (G.mode === 'online') {
+    send({ type: 'PLAY_AGAIN' })
+    playAgainBtn.disabled = true
+    playAgainBtn.textContent = 'Waiting for opponent...'
+    return
+  }
   resultsGrid.innerHTML = ''; resultBars.innerHTML = '';
   winnerText.textContent = ''; winnerSub.textContent = '';
   turnOverlay.classList.remove('active');
@@ -203,7 +209,12 @@ copyLinkBtn.addEventListener('click', async () => {
 
 function handleMsg(msg) {
   switch (msg.type) {
+    case 'OPPONENT_PLAY_AGAIN':
+      winnerSub.textContent = 'Opponent wants to play again!'
+      break
     case 'GAME_START': {
+      playAgainBtn.disabled = false
+      playAgainBtn.textContent = 'Play Again'
       G.mode = 'online'
       G.phase = 'playing'
       G.selfId = onlinePlayerIndex

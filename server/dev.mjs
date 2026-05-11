@@ -59,7 +59,7 @@ function createRoom() {
     players: [],
     seed: null, cells: [], avail: [], target: null,
     turnMs: 0, running: false, shared: 60, found: 0, pid: 0, turnNum: 0,
-    phase: 'waiting', timer: null,
+    phase: 'waiting', timer: null, replay: [],
   })
   return code
 }
@@ -86,6 +86,9 @@ function startGame(room) {
   s.found = 0
   s.running = false
   s.turnMs = 0
+  s.turnNum = 0
+  s.replay = []
+  for (const p of s.players) { p.finds = []; p.t = 0; p.skips = 0; p.errors = 0 }
 
   const playersInfo = s.players.map(p => ({ name: p.name }))
   const cellsData = s.cells.map(c => ({ num: c.num, site: c.site, vertices: c.vertices, found: false, fb: c.fb }))
@@ -173,6 +176,15 @@ function handleMessage(room, playerIndex, data) {
       break
     case 'SKIP':
       handleSkip(room, playerIndex)
+      break
+    case 'PLAY_AGAIN':
+      if (!s.replay.includes(playerIndex)) s.replay.push(playerIndex)
+      broadcast(room, { type: 'OPPONENT_PLAY_AGAIN' })
+      if (s.replay.length >= 2) {
+        s.replay = []
+        s.timer = null
+        startGame(room)
+      }
       break
   }
 }
