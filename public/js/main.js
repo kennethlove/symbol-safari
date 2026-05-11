@@ -359,16 +359,15 @@ function handleMsg(msg) {
         if (fs[0]) fs[0].style.height = ((p1s.time / mx) * 100) + '%'
         if (fs[1]) fs[1].style.height = ((p2s.time / mx) * 100) + '%'
       }, 50)
-      const card = (p, stats, iw) => {
+      const card = (stats, idx, iw) => {
         const avg = stats.finds > 0 ? (stats.time / stats.finds) : 0
         const pts = []
         if (stats.skips > 0) pts.push(`${stats.skips} skipped`)
         if (avg > 0) pts.push(`${avg.toFixed(2)}s avg`)
-        const isP2 = i === 1
-        const wClass = iw ? (isP2 ? ' winner-p2' : ' winner') : ''
+        const wClass = iw ? (idx === 1 ? ' winner-p2' : ' winner') : ''
         return `<div class="r-card${wClass}"><div class="rc-name">${stats.name}</div><div class="rc-stat">${stats.finds} found · ${stats.time.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`
       }
-      resultsGrid.innerHTML = card(p1, p1s, 0 === msg.winner) + card(p2, p2s, 1 === msg.winner)
+      resultsGrid.innerHTML = card(p1s, 0, 0 === msg.winner) + card(p2s, 1, 1 === msg.winner)
       gameScreen.classList.add('hidden')
       resultsScreen.classList.remove('hidden')
       break
@@ -405,10 +404,7 @@ function loop(now) {
   if (G.running) G.turnMs += dt * 1000;
 
   if (G.mode !== 'online' && G.phase !== 'ready') G.shared -= dt;
-  if (G.shared <= 0) {
-    G.shared = 0; updateStats(G);
-    if (G.phase === 'playing' || G.phase === 'ready') { endGame(); return; }
-  }
+  if (G.shared <= 0 && G.mode !== 'online') { G.shared = 0; updateStats(G); if (G.phase === 'playing' || G.phase === 'ready') endGame(); return; }
 
   timerRingText.textContent = G.shared.toFixed(1);
 
