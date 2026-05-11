@@ -90,6 +90,8 @@ export const opponentMsg     = $('opponent-msg')
 export function show(s) {
   [startScreen, gameScreen, resultsScreen].forEach(el => el.classList.add('hidden'));
   s.classList.remove('hidden');
+  const gt = document.getElementById('global-mode-toggle');
+  if (gt) gt.style.display = s === startScreen ? '' : 'none';
 }
 
 export function resizeBg() {
@@ -286,27 +288,36 @@ export function drawBg(now) {
 
   const t = bgTime;
   const cx = w/2, cy = h/2;
+  const isLight = currentMode === 'light';
 
   for (const cell of bgCells) {
     const v = cell.vertices;
     if (v.length < 3) continue;
     const nd = cell.nd || 0;
-    const pulse = 0.06 + 0.04 * Math.sin(t * 0.5 + cell.ph);
+    const pulseMin = isLight ? 0.60 : 0.06;
+    const pulseRange = isLight ? 0.20 : 0.04;
+    const pulse = pulseMin + pulseRange * Math.sin(t * 0.5 + cell.ph);
     const hVal = 260 - nd * 40 + Math.sin(t * 0.3 + cell.ph) * 10;
+    const bgC = isLight ? 0.008 : 0.03;
     bgCtx.beginPath();
     bgCtx.moveTo(v[0].x, v[0].y);
     for (let i = 1; i < v.length; i++) bgCtx.lineTo(v[i].x, v[i].y);
     bgCtx.closePath();
-    bgCtx.fillStyle = `oklch(${(pulse * 100).toFixed(1)}% 0.03 ${hVal})`;
+    bgCtx.fillStyle = `oklch(${(pulse * 100).toFixed(1)}% ${bgC} ${hVal})`;
     bgCtx.fill();
-    bgCtx.strokeStyle = `oklch(60% 0.02 260 / 0.04)`;
+    bgCtx.strokeStyle = isLight ? `oklch(75% 0.005 260 / 0.06)` : `oklch(60% 0.02 260 / 0.04)`;
     bgCtx.lineWidth = 0.5;
     bgCtx.stroke();
   }
 
   const grad2 = bgCtx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.55);
-  grad2.addColorStop(0, 'oklch(68% 0.2 260 / 0.08)');
-  grad2.addColorStop(0.5, 'oklch(65% 0.18 145 / 0.03)');
+  if (isLight) {
+    grad2.addColorStop(0, 'oklch(55% 0.22 260 / 0.04)');
+    grad2.addColorStop(0.5, 'oklch(50% 0.22 145 / 0.02)');
+  } else {
+    grad2.addColorStop(0, 'oklch(68% 0.2 260 / 0.08)');
+    grad2.addColorStop(0.5, 'oklch(65% 0.18 145 / 0.03)');
+  }
   grad2.addColorStop(1, 'transparent');
   bgCtx.fillStyle = grad2;
   bgCtx.fillRect(0, 0, w, h);

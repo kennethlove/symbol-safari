@@ -1,8 +1,23 @@
-import { playField, canvas, ctx, fxCanvas, fxCtx, cv, ACCENT, P2_COLOR, WRONG, FONT_MONO } from './ui.js';
+import { playField, canvas, ctx, fxCanvas, fxCtx, cv, ACCENT, P2_COLOR, WRONG, FONT_MONO, currentMode } from './ui.js';
 import { pip } from './voronoi.js';
 
 export let cW = 0, cH = 0;
 let mouseX = -1, mouseY = -1;
+
+const DARK = {
+  bg: [[0,'oklch(22% 0.028 265)'],[0.35,'oklch(18% 0.018 260)'],[0.6,'oklch(14% 0.01 255)'],[1,'oklch(8% 0.004 250)']],
+  cl0:.08,cl1:.36,cc:.022,ch:260,
+  tl0:42,tl1:97,tc:.015,th:260,
+  sl:55,sc:.02,sh:260,
+  wl:.16,wc:.25,wh:25,
+}
+const LIGHT = {
+  bg: [[0,'oklch(97% 0.004 250)'],[0.35,'oklch(94% 0.004 250)'],[0.6,'oklch(90% 0.004 250)'],[1,'oklch(85% 0.004 250)']],
+  cl0:.82,cl1:.95,cc:.01,ch:260,
+  tl0:15,tl1:50,tc:.02,th:260,
+  sl:75,sc:.01,sh:260,
+  wl:.85,wc:.12,wh:25,
+}
 
 export function setMousePos(x, y) {
   mouseX = x;
@@ -24,6 +39,8 @@ export function resize() {
 
 function okh(l, c, h) { return `oklch(${(l*100).toFixed(1)}% ${c} ${h})`; }
 
+function C() { return currentMode === 'light' ? LIGHT : DARK }
+
 export function render(c, fx, G) {
   const w = cW, h = cH;
   c.clearRect(0, 0, w, h);
@@ -31,12 +48,10 @@ export function render(c, fx, G) {
   const sx = mouseX >= 0 ? mouseX : w/2;
   const sy = mouseY >= 0 ? mouseY : h/2;
   const spotR = Math.max(w, h) * 0.7;
+  const Th = C();
 
   const grad = c.createRadialGradient(sx, sy, 0, sx, sy, spotR);
-  grad.addColorStop(0, 'oklch(22% 0.028 265)');
-  grad.addColorStop(0.35, 'oklch(18% 0.018 260)');
-  grad.addColorStop(0.6, 'oklch(14% 0.01 255)');
-  grad.addColorStop(1, 'oklch(8% 0.004 250)');
+  for (const [stop, col] of Th.bg) grad.addColorStop(stop, col);
   c.fillStyle = grad;
   c.fillRect(0, 0, w, h);
 
@@ -83,12 +98,12 @@ export function render(c, fx, G) {
       continue;
     }
     if (cell.wr > 0) {
-      c.fillStyle = okh(0.16, 0.25, 25);
+      c.fillStyle = okh(Th.wl, Th.wc, Th.wh);
     } else if (isHover) {
       c.fillStyle = cv(G.mode === 'online' ? 'accent-dim' : (G.pid === 1 ? 'p2-color-dim' : 'accent-dim'));
     } else {
-      const b = 0.08 + 0.28 * Math.pow(spot, 2);
-      c.fillStyle = `oklch(${(b * 100).toFixed(1)}% 0.022 ${260 + hueCycle})`;
+      const b = Th.cl0 + (Th.cl1 - Th.cl0) * Math.pow(spot, 2);
+      c.fillStyle = `oklch(${(b * 100).toFixed(1)}% ${Th.cc} ${Th.ch + hueCycle})`;
     }
     c.fill();
 
@@ -103,7 +118,7 @@ export function render(c, fx, G) {
       c.restore();
     } else {
       const strokeA = 0.03 + 0.15 * Math.pow(spot, 2);
-      c.strokeStyle = `oklch(55% 0.02 260 / ${strokeA.toFixed(3)})`;
+      c.strokeStyle = `oklch(${Th.sl}% ${Th.sc} ${Th.sh} / ${strokeA.toFixed(3)})`;
       c.lineWidth = 0.5 + 0.6 * Math.pow(spot, 2);
       c.stroke();
     }
@@ -138,8 +153,8 @@ export function render(c, fx, G) {
       continue;
     } else {
       c.globalAlpha = 0.15 + 0.85 * Math.pow(spot, 3);
-      const nb = 42 + 55 * Math.pow(spot, 2);
-      c.fillStyle = `oklch(${nb.toFixed(1)}% 0.015 ${260 + hueCycle})`;
+      const nb = Th.tl0 + (Th.tl1 - Th.tl0) * Math.pow(spot, 2);
+      c.fillStyle = `oklch(${nb.toFixed(1)}% ${Th.tc} ${Th.th + hueCycle})`;
       c.font = `600 ${cellFsz}px ${G.packFont || FONT_MONO}`;
     }
     c.textAlign = 'center'; c.textBaseline = 'middle';

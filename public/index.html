@@ -304,6 +304,11 @@ html, body {
   z-index: 100;
 }
 
+#hud-mode-toggle button {
+  padding: 3px 10px;
+  font-size: 13px;
+}
+
 .player-inputs { display: flex; gap: 32px; width: 100%; max-width: 400px; justify-content: center; }
 
 .input-group {
@@ -747,7 +752,11 @@ html, body {
     </div>
     <div class="hud-section hud-right" style="display:flex;align-items:flex-end;gap:6px;flex-direction:column">
       <div class="t-label">Turn</div>
-      <div style="display:flex;align-items:center;gap:6px">
+      <div style="display:flex;align-items:center;gap:6px;pointer-events:auto">
+        <div class="mode-toggle" id="hud-mode-toggle">
+          <button data-mode="dark" class="active">Dark</button>
+          <button data-mode="light">Light</button>
+        </div>
         <span id="player-badge" class="is-p1">Player 1</span>
         <button id="hud-skip-btn" style="display:none">Skip</button>
       </div>
