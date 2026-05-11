@@ -133,7 +133,10 @@ function endGame(room) {
   let winner = -1
   if (s.players.length === 2) {
     const p0 = s.players[0]; const p1 = s.players[1]
-    if (p0.t < p1.t) winner = 0
+    const f0 = p0.finds.length, f1 = p1.finds.length
+    if (f0 > f1) winner = 0
+    else if (f1 > f0) winner = 1
+    else if (p0.t < p1.t) winner = 0
     else if (p1.t < p0.t) winner = 1
     else if ((p0.errors || 0) < (p1.errors || 0)) winner = 0
     else if ((p1.errors || 0) < (p0.errors || 0)) winner = 1
