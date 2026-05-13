@@ -14,7 +14,7 @@ import {
   timeLimitInput, playField, mPos,
   targetNumEl, turnOverlay, toPreviewNum, toPlayerText, toSubText, playerBadge,
   resultsGrid, resultBars, winnerText, winnerSub,
-  showOnlineUI, onlineActions, roomLobby, joinFormEl,
+  showOnlineUI, onlineActions, roomLobby, joinFormEl, soloStats, pvpStats,
   createRoomBtn, joinRoomBtn, joinBtn, roomCodeDisplay, lobbyStatus,
   showLobby, setLobbyStatus, showJoinForm, getRoomCode,
   copyCodeBtn, copyLinkBtn,
@@ -22,7 +22,7 @@ import {
   showOpponentDisconnected, hideOpponentDisconnected,
   roomTimeDisplay, roomTimeValue,
 } from './ui.js';
-import { connect, send, disconnect, setServerHost, apiURL } from './network.js';
+import { connect, send, disconnect, setServerHost, setOnConnectionError, apiURL } from './network.js';
 
 let onlinePlayerIndex = -1
 
@@ -75,16 +75,39 @@ playAgainBtn.addEventListener('click', () => {
     playAgainBtn.textContent = 'Waiting for opponent...'
     return
   }
+  returnToMenu()
+});
+
+document.getElementById('main-menu-btn').addEventListener('click', () => {
+  if (G.mode === 'online') disconnect()
+  returnToMenu()
+})
+
+function returnToMenu() {
+  disconnect()
+  G.mode = 'solo'
+  G.phase = 'idle'
   resultsGrid.innerHTML = ''; resultBars.innerHTML = '';
   winnerText.textContent = ''; winnerSub.textContent = '';
   turnOverlay.classList.remove('active');
   toPreviewNum.className = 'to-num';
   goBtn.style.display = 'none';
-  G.phase = 'idle';
-  show(startScreen);
-  resizeBg();
-  initBg();
-});
+  pvpStats.style.display = 'none'
+  soloStats.style.display = 'flex'
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'))
+  document.querySelector('.mode-btn[data-mode="solo"]').classList.add('selected')
+  p2InputGroup.style.display = 'none'
+  p2SwatchRow.style.display = 'none'
+  document.getElementById('p1-name-label').textContent = 'Player 1'
+  startBtn.style.display = ''
+  onlineActions.classList.remove('hidden')
+  roomLobby.classList.add('hidden')
+  joinFormEl.classList.add('hidden')
+  showOnlineUI(false)
+  show(startScreen)
+  resizeBg()
+  initBg()
+}
 
 hudSkipBtn.addEventListener('click', () => {
   if (G.mode === 'online') {
@@ -95,15 +118,10 @@ hudSkipBtn.addEventListener('click', () => {
 })
 
 goBtn.addEventListener('click', () => {
+  if (G.phase !== 'ready') return;
   turnOverlay.classList.remove('active');
   toPreviewNum.className = 'to-num';
   goBtn.style.display = 'none';
-  if (G.mode === 'online') {
-    send({ type: 'READY' })
-    G.phase = 'ready'
-    return
-  }
-  if (G.phase !== 'ready') return;
   if (G.shared <= 0) { endGame(); return; }
   G.phase = 'playing';
   startTurn();
@@ -151,15 +169,17 @@ createRoomBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, timeLimit })
     })
-    if (!res.ok) { setLobbyStatus('Server error'); return }
+    if (!res.ok) { console.error('Create POST failed:', res.status, await res.text()); setLobbyStatus('Server error'); return }
     const data = await res.json()
     if (data.timeLimit) setGameDuration(data.timeLimit)
     onlinePlayerIndex = data.playerIndex
     G.players[onlinePlayerIndex].n = name
     showLobby(data.roomCode)
     updateStats(G)
+    setOnConnectionError(() => setLobbyStatus('Connection failed — retrying...'))
     connect(data.roomCode, data.playerIndex, handleMsg)
   } catch (e) {
+    console.error('Create error:', e)
     setLobbyStatus('Failed to create room')
   }
 })
@@ -171,16 +191,18 @@ joinRoomBtn.addEventListener('click', () => {
 })
 
 joinBtn.addEventListener('click', async () => {
+  console.log('Join btn clicked')
   try {
     const name = p1NameInput.value.trim() || 'Player 1'
     const code = getRoomCode()
-    if (!code) return
+    console.log('Room code input:', JSON.stringify(code))
+    if (!code) { console.error('No room code'); return }
     const res = await fetch(apiURL(`/api/room/${code}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name })
     })
-    if (!res.ok) { setLobbyStatus('Room not found or full'); return }
+    if (!res.ok) { console.error('Join POST failed:', res.status, await res.text()); setLobbyStatus('Room not found or full'); return }
     const data = await res.json()
     onlinePlayerIndex = data.playerIndex
     G.players[onlinePlayerIndex].n = name
@@ -191,8 +213,10 @@ joinBtn.addEventListener('click', async () => {
     timeLimitInput.disabled = true
     showLobby(code)
     updateStats(G)
+    setOnConnectionError(() => setLobbyStatus('Connection failed — retrying...'))
     connect(code, data.playerIndex, handleMsg)
   } catch (e) {
+    console.error('Join error:', e)
     setLobbyStatus('Failed to join room')
   }
 })
@@ -252,13 +276,12 @@ function handleMsg(msg) {
       G.found = 0
       G.seed = msg.seed
       G.shared = msg.shared
-      G.pid = msg.pid
-      G.running = false
+      G.running = true
       G.turnMs = 0
       G.last = null
       G.best = Infinity
       G.fx = []
-      G.target = null
+      G.target = msg.target
       G.packFont = ''
       G.time = 0
       G.lt = 0
@@ -284,8 +307,16 @@ function handleMsg(msg) {
       G.globalFontSize = Math.max(20, Math.min(46, radii[Math.max(0, Math.floor(radii.length * 0.3))] * 1.6))
       render(ctx, fxCtx, G)
       updateStats(G)
-      targetNumEl.textContent = '??'
-      targetNumEl.style.color = ''
+      if (G.target !== null && G.target !== undefined) {
+        targetNumEl.textContent = String(G.target)
+        targetNumEl.style.color = ACCENT
+      } else {
+        targetNumEl.textContent = '??'
+        targetNumEl.style.color = ''
+      }
+      turnOverlay.classList.remove('active')
+      goBtn.style.display = 'none'
+      hudSkipBtn.style.display = ''
       timerRingText.textContent = String(G.shared.toFixed(1))
       timerBarFill.style.width = '100%'
       timerBarFill.className = ''
@@ -297,34 +328,12 @@ function handleMsg(msg) {
       playerBadge.className = 'is-p1'
       break
     }
-    case 'TURN_START': {
-      G.phase = 'ready'
+    case 'TARGET_UPDATE': {
       G.target = msg.target
-      G.pid = msg.pid
-      const p = G.players[onlinePlayerIndex]
-      toPlayerText.textContent = p.n
-      toSubText.textContent = 'Find the symbol'
-      toPreviewNum.textContent = String(msg.target)
-      toPreviewNum.className = 'to-num show'
-      playerBadge.textContent = p.n
-      playerBadge.className = 'is-p1'
-      goBtn.style.display = 'inline-block'
-      goBtn.classList.toggle('is-p2', G.mode !== 'online' && onlinePlayerIndex === 1)
-      turnOverlay.classList.add('active')
-      targetNumEl.style.color = ACCENT
-      targetNumEl.textContent = '??'
-      break
-    }
-    case 'GO': {
-      G.phase = 'playing'
-      G.running = true
-      G.turnMs = 0
-      turnOverlay.classList.remove('active')
       targetNumEl.textContent = String(G.target)
       targetNumEl.style.color = ACCENT
       targetNumEl.classList.add('pop')
       setTimeout(() => targetNumEl.classList.remove('pop'), 200)
-      render(ctx, fxCtx, G)
       break
     }
     case 'CELL_FOUND': {
@@ -334,9 +343,14 @@ function handleMsg(msg) {
       cell.fb = msg.playerIndex
       G.avail = G.avail.filter(n => n !== msg.num)
       G.found++
-      if (msg.playerIndex === onlinePlayerIndex) {
-        G.players[msg.playerIndex].t += msg.time / 1000
-        G.players[msg.playerIndex].finds.push({ num: msg.num, time: msg.time / 1000 })
+      G.players[msg.playerIndex].t += msg.time / 1000
+      G.players[msg.playerIndex].finds.push({ num: msg.num, time: msg.time / 1000 })
+      if (msg.playerIndex === onlinePlayerIndex && msg.nextTarget !== null && msg.nextTarget !== undefined) {
+        G.target = msg.nextTarget
+        targetNumEl.textContent = String(G.target)
+        targetNumEl.style.color = ACCENT
+        targetNumEl.classList.add('pop')
+        setTimeout(() => targetNumEl.classList.remove('pop'), 200)
       }
       const pColor = msg.playerIndex === onlinePlayerIndex ? ACCENT : P2_COLOR
       spawnFX(cell.site.x, cell.site.y, 'find', pColor)
@@ -362,19 +376,6 @@ function handleMsg(msg) {
       updateStats(G)
       break
     }
-    case 'TURN_WAIT': {
-      G.phase = 'ready'
-      toPlayerText.textContent = G.players[msg.player].n
-      toSubText.textContent = 'is finding the symbol...'
-      toPreviewNum.textContent = ''
-      toPreviewNum.className = 'to-num'
-      goBtn.style.display = 'none'
-      playerBadge.textContent = G.players[onlinePlayerIndex].n
-      playerBadge.className = 'is-p1'
-      updateStats(G)
-      turnOverlay.classList.add('active')
-      break
-    }
     case 'TIMER_SYNC':
       G.shared = msg.remaining
       updateStats(G)
@@ -388,10 +389,10 @@ function handleMsg(msg) {
       } else {
         winnerText.textContent = 'You Lose'
       }
-      winnerSub.textContent = `${gameDuration.toFixed(1)}s · Numbers (${G.cells.length} cells)`
+      winnerSub.textContent = `Numbers (${G.cells.length} cells)`
       const p1s = msg.stats[0], p2s = msg.stats[1]
-      const t1 = p1s.time / 1000, t2 = p2s.time / 1000
-      const mx = Math.max(t1, t2, 0.01)
+      const f1 = p1s.finds.length, f2 = p2s.finds.length
+      const mFinds = Math.max(f1, f2, 1)
       const winColor = 'var(--accent)'
       const loseColor = 'oklch(55% 0 0)'
       const c1 = msg.winner === 0 ? winColor : loseColor
@@ -400,22 +401,20 @@ function handleMsg(msg) {
       const s1 = 0 === msg.winner ? ' ' + star : ''
       const s2 = 1 === msg.winner ? ' ' + star : ''
       resultBars.innerHTML = `
-        <div class="rb-group"><div class="rb-label" style="color:${c1}">${p1s.name}${s1}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c1};border-radius:4px"></div></div><div class="rb-val">${t1.toFixed(1)}s</div></div>
-        <div class="rb-group"><div class="rb-label" style="color:${c2}">${p2s.name}${s2}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c2};border-radius:4px"></div></div><div class="rb-val">${t2.toFixed(1)}s</div></div>`
+        <div class="rb-group"><div class="rb-label" style="color:${c1}">${p1s.name}${s1}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c1};border-radius:4px"></div></div><div class="rb-val">${f1} found</div></div>
+        <div class="rb-group"><div class="rb-label" style="color:${c2}">${p2s.name}${s2}</div><div class="rb-track"><div class="rb-fill" style="height:0%;background:${c2};border-radius:4px"></div></div><div class="rb-val">${f2} found</div></div>`
       setTimeout(() => {
         const fs = resultBars.querySelectorAll('.rb-fill')
-        if (fs[0]) fs[0].style.height = ((t1 / mx) * 100) + '%'
-        if (fs[1]) fs[1].style.height = ((t2 / mx) * 100) + '%'
+        if (fs[0]) fs[0].style.height = ((f1 / mFinds) * 100) + '%'
+        if (fs[1]) fs[1].style.height = ((f2 / mFinds) * 100) + '%'
       }, 50)
       const card = (stats, iw, hl) => {
         const cnt = stats.finds.length
-        const t = stats.time / 1000
-        const avg = cnt > 0 ? t / cnt : 0
+        const avg = cnt > 0 ? (stats.time / 1000) / cnt : 0
         const pts = []
         if (stats.skips > 0) pts.push(`${stats.skips} skipped`)
-        if (avg > 0) pts.push(`${avg.toFixed(2)}s avg`)
         const wStyle = iw ? `border-color:${hl};background:color-mix(in srgb, ${hl} 10%, transparent)` : ''
-        return `<div class="r-card"${iw ? ` style="${wStyle}"` : ''}><div class="rc-name">${stats.name}</div><div class="rc-stat">${cnt} found · ${t.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`
+        return `<div class="r-card"${iw ? ` style="${wStyle}"` : ''}><div class="rc-name">${stats.name}</div><div class="rc-stat">${cnt} found · ${avg.toFixed(2)}s avg</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`
       }
       resultsGrid.innerHTML = card(p1s, 0 === msg.winner, c1) + card(p2s, 1 === msg.winner, c2)
       gameScreen.classList.add('hidden')

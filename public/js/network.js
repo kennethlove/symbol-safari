@@ -3,12 +3,17 @@ let messageHandler = null
 let reconnectTimer = null
 let roomCode = null
 let playerIndex = null
+let onConnectionError = null
 const RECONNECT_INTERVAL = 2000
 
 export let SERVER_HOST = location.host
 
 export function setServerHost(host) {
   SERVER_HOST = host
+}
+
+export function setOnConnectionError(fn) {
+  onConnectionError = fn
 }
 
 export function apiURL(path) {
@@ -22,13 +27,20 @@ export function connect(code, index, onMessage) {
 
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   const url = `${protocol}//${SERVER_HOST}/ws/${code}?player=${index}`
+  console.log('WS connect:', url)
   ws = new WebSocket(url)
 
   ws.onopen = () => {
+    console.log('WS open:', url)
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
       reconnectTimer = null
     }
+  }
+
+  ws.onerror = (e) => {
+    console.error('WS error:', e.type, url)
+    if (onConnectionError) onConnectionError()
   }
 
   ws.onmessage = (e) => {
@@ -40,7 +52,8 @@ export function connect(code, index, onMessage) {
     }
   }
 
-  ws.onclose = () => {
+  ws.onclose = (e) => {
+    console.log('WS close:', url, 'code:', e.code, 'reason:', e.reason)
     ws = null
     reconnectTimer = setTimeout(() => {
       if (roomCode && playerIndex !== null && messageHandler)

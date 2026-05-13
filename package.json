@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node server/dev.mjs 3000",
     "deploy": "wrangler deploy",
-    "pages:dev": "wrangler pages dev public --port 3000 --do=ROOMS=GameRoom"
+    "cf:dev": "wrangler dev --port 3000",
+    "pages:dev": "wrangler pages dev public --port 3000 --do=ROOM=RoomDO"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

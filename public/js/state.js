@@ -6,7 +6,7 @@ import {
   hudSkipBtn, playerBadge, toPlayerText, toSubText,
   toPreviewNum, goBtn, turnOverlay,
   winnerText, winnerSub, resultsGrid, resultBars,
-  pvpName, pvpFound, pvpSkips, pvpTime, pvpSide,
+  pvpName, pvpFound, pvpSkips, pvpSide,
   soloFoundEl, soloSkipsEl, soloRemainEl,
   ACCENT, P2_COLOR, WRONG, FONT_MONO,
   updateStats, showTurnReadyUI, packPicker,
@@ -241,39 +241,43 @@ export function endGame() {
     const p = G.players[0];
     const avg = p.finds.length > 0 ? (p.t / p.finds.length) : 0;
     winnerText.textContent = 'Game Over';
-    winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${packLabel}`;
-    const xs = [];
-    if (p.finds.length > 0) xs.push(`${avg.toFixed(2)}s avg`);
-    if (p.skips > 0) xs.push(`${p.skips} skipped`);
-    const estr = xs.length > 0 ? ' \u00b7 ' + xs.join(' \u00b7 ') : '';
-    resultsGrid.innerHTML = `<div class="r-card winner"><div class="rc-name">${p.n}</div><div class="rc-stat" style="color:var(--accent)">${G.found} found · ${p.t.toFixed(1)}s</div><div class="rc-sub">${G.found} / ${G.cells.length} symbols${estr}</div></div>`;
+    winnerSub.textContent = packLabel;
+    const extras = [];
+    if (p.skips > 0) extras.push(`${p.skips} skipped`);
+    const estr = extras.length > 0 ? ' \u00b7 ' + extras.join(' \u00b7 ') : '';
+    resultsGrid.innerHTML = `<div class="r-card winner"><div class="rc-name">${p.n}</div><div class="rc-stat" style="color:var(--accent)">${G.found} found · ${avg.toFixed(2)}s avg</div><div class="rc-sub">${G.cells.length} symbols${estr}</div></div>`;
     resultBars.innerHTML = '';
   } else {
     const p1 = G.players[0], p2 = G.players[1];
-    const mx = Math.max(p1.t, p2.t, 0.01);
-    const tie = Math.abs(p1.t - p2.t) < 0.01;
-    let w = null;
-    if (!tie) w = p1.t < p2.t ? p1 : p2;
+    const avg1 = p1.finds.length > 0 ? p1.t / p1.finds.length : 0;
+    const avg2 = p2.finds.length > 0 ? p2.t / p2.finds.length : 0;
+    const f1 = p1.finds.length, f2 = p2.finds.length;
+    let w = p1, tie = false;
+    if (f1 > f2) w = p1;
+    else if (f2 > f1) w = p2;
+    else if (avg1 < avg2) w = p1;
+    else if (avg2 < avg1) w = p2;
+    else tie = true;
+    const mFinds = Math.max(f1, f2, 1);
     resultBars.innerHTML = `
-      <div class="rb-group"><div class="rb-label" style="color:var(--accent)">${p1.n}</div><div class="rb-track"><div class="rb-fill p1" style="height:0%"></div></div><div class="rb-val">${p1.t.toFixed(1)}s</div></div>
-      <div class="rb-group"><div class="rb-label" style="color:var(--p2-color)">${p2.n}</div><div class="rb-track"><div class="rb-fill p2" style="height:0%"></div></div><div class="rb-val">${p2.t.toFixed(1)}s</div></div>`;
+      <div class="rb-group"><div class="rb-label" style="color:var(--accent)">${p1.n}</div><div class="rb-track"><div class="rb-fill p1" style="height:0%"></div></div><div class="rb-val">${f1} found</div></div>
+      <div class="rb-group"><div class="rb-label" style="color:var(--p2-color)">${p2.n}</div><div class="rb-track"><div class="rb-fill p2" style="height:0%"></div></div><div class="rb-val">${f2} found</div></div>`;
     setTimeout(() => {
       const fs = resultBars.querySelectorAll('.rb-fill');
-      if (fs[0]) fs[0].style.height = ((p1.t / mx) * 100) + '%';
-      if (fs[1]) fs[1].style.height = ((p2.t / mx) * 100) + '%';
+      if (fs[0]) fs[0].style.height = ((f1 / mFinds) * 100) + '%';
+      if (fs[1]) fs[1].style.height = ((f2 / mFinds) * 100) + '%';
     }, 50);
 
     const card = (p, iw) => {
       const avg = p.finds.length > 0 ? (p.t / p.finds.length) : 0;
       const pts = [];
       if (p.skips > 0) pts.push(`${p.skips} skipped`);
-      if (avg > 0) pts.push(`${avg.toFixed(2)}s avg`);
       const isP2 = p === G.players[1];
       const wClass = iw ? (isP2 ? ' winner-p2' : ' winner') : '';
-      return `<div class="r-card${wClass}"><div class="rc-name">${p.n}</div><div class="rc-stat">${p.finds.length} found · ${p.t.toFixed(1)}s</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`;
+      return `<div class="r-card${wClass}"><div class="rc-name">${p.n}</div><div class="rc-stat">${p.finds.length} found · ${avg.toFixed(2)}s avg</div><div class="rc-sub" style="font-size:12px;color:var(--muted);margin-top:4px">${pts.join(' \u00b7 ')}</div></div>`;
     };
-    if (tie) { winnerText.textContent = "It's a Tie!"; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${packLabel}`; }
-    else { winnerText.textContent = `${w.n} Wins!`; winnerSub.textContent = `${gameDuration.toFixed(1)}s · ${packLabel}`; }
+    if (tie) { winnerText.textContent = "It's a Tie!"; winnerSub.textContent = packLabel; }
+    else { winnerText.textContent = `${w.n} Wins!`; winnerSub.textContent = packLabel; }
     resultsGrid.innerHTML = card(p1, w === p1) + card(p2, w === p2);
   }
 }

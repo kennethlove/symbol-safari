@@ -492,16 +492,17 @@ html, body {
 }
 
 #pvp-stats {
-  display: flex; justify-content: center; align-items: stretch; gap: 24px;
+  display: flex; justify-content: center; align-items: stretch; gap: 16px;
 }
 
 .pvp-side {
-  display: flex; flex-direction: column; gap: 3px;
-  padding: 10px 20px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 16px 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  min-width: 140px;
+  min-width: 130px;
+  position: relative;
 }
 
 .pvp-side.active-turn {
@@ -510,15 +511,40 @@ html, body {
 }
 .pvp-side.active-turn.is-p2 { border-color: var(--p2-color); background: var(--p2-color-bg); }
 
-.pvp-name {
-  font-family: var(--font-display);
-  font-size: 13px; font-weight: 600;
-  margin-bottom: 2px;
+.pvp-head {
+  display: flex; align-items: center; gap: 6px;
 }
 
-.pvp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
-.pvp-label { color: var(--muted); }
-.pvp-val { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pvp-name {
+  font-family: var(--font-display);
+  font-size: 12px; font-weight: 600;
+}
+
+.pvp-adv {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 0 5px; border-radius: 4px;
+  line-height: 16px;
+}
+.pvp-side.is-p2 .pvp-adv { color: var(--p2-color); background: var(--p2-color-bg); }
+
+.pvp-found {
+  font-family: var(--font-mono);
+  font-size: 28px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.pvp-sub {
+  display: flex; gap: 10px;
+  font-size: 10px; color: var(--muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ps-label { color: var(--muted); opacity: 0.7; }
 
 .pvp-vs {
   display: flex; align-items: center;
@@ -640,8 +666,10 @@ html, body {
   #target-number { font-size: 42px; }
   #shared-timer { font-size: 22px; }
   #solo-stats { gap: 20px; }
-  #pvp-stats { gap: 12px; }
-  .pvp-side { min-width: 100px; padding: 8px 14px; }
+  #pvp-stats { gap: 8px; }
+  .pvp-side { min-width: 90px; padding: 6px 10px 4px; }
+  .pvp-found { font-size: 22px; }
+  .pvp-sub { font-size: 9px; gap: 6px; }
   #timer-ring-svg { width: 32px; height: 32px; }
   #results-grid { flex-direction: column; }
 }
@@ -771,17 +799,25 @@ html, body {
 
   <div id="pvp-stats" class="bottom-stats" style="display:none">
     <div class="pvp-side" id="pvp-side-0">
-      <span class="pvp-name" id="pvp-name-0">Player 1</span>
-      <div class="pvp-row"><span class="pvp-label">Found</span><span class="pvp-val" id="pvp-found-0">0</span></div>
-      <div class="pvp-row"><span class="pvp-label">Skips</span><span class="pvp-val" id="pvp-skips-0">3 / 3</span></div>
-      <div class="pvp-row"><span class="pvp-label">Time</span><span class="pvp-val" id="pvp-time-0">0.0s</span></div>
+      <div class="pvp-head">
+        <span class="pvp-name" id="pvp-name-0">Player 1</span>
+        <span class="pvp-adv" id="pvp-adv-0"></span>
+      </div>
+      <div class="pvp-found" id="pvp-found-0">0</div>
+      <div class="pvp-sub">
+        <span class="pvp-sub-item"><span class="ps-label">Skips</span> <span id="pvp-skips-0">3/3</span></span>
+      </div>
     </div>
     <div class="pvp-vs">vs</div>
     <div class="pvp-side" id="pvp-side-1">
-      <span class="pvp-name" id="pvp-name-1">Player 2</span>
-      <div class="pvp-row"><span class="pvp-label">Found</span><span class="pvp-val" id="pvp-found-1">0</span></div>
-      <div class="pvp-row"><span class="pvp-label">Skips</span><span class="pvp-val" id="pvp-skips-1">3 / 3</span></div>
-      <div class="pvp-row"><span class="pvp-label">Time</span><span class="pvp-val" id="pvp-time-1">0.0s</span></div>
+      <div class="pvp-head">
+        <span class="pvp-name" id="pvp-name-1">Player 2</span>
+        <span class="pvp-adv" id="pvp-adv-1"></span>
+      </div>
+      <div class="pvp-found" id="pvp-found-1">0</div>
+      <div class="pvp-sub">
+        <span class="pvp-sub-item"><span class="ps-label">Skips</span> <span id="pvp-skips-1">3/3</span></span>
+      </div>
     </div>
   </div>
 
@@ -802,6 +838,7 @@ html, body {
   <div id="result-bars"></div>
   <div id="results-grid"></div>
   <button class="primary-btn" id="play-again-btn">Play Again</button>
+  <button class="secondary-btn" id="main-menu-btn" style="margin-top:8px">Main Menu</button>
 </div>
 
 <div id="disconnect-overlay" class="hidden" style="position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--bg) 93%, transparent);backdrop-filter:blur(4px)">

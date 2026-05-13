@@ -8,7 +8,7 @@ import { genV, pip } from '../public/js/voronoi.js'
 const W = 800, H = 600
 
 function makePlayer(name) {
-  return { name, ws: null, connected: true, finds: [], skips: 0, t: 0, errors: 0 }
+  return { name, ws: null, connected: true, finds: [], skips: 0, t: 0, errors: 0, currentTarget: null }
 }
 
 const PORT = parseInt(process.argv[2], 10) || 3001
@@ -29,10 +29,6 @@ function serveFile(res, filePath) {
 }
 
 const rooms = new Map()
-
-const SYMBOL_PACKS = {
-  numbers: { count: 90, id: 'numbers' },
-}
 
 function mulberry32(a) {
   return function () {
@@ -57,8 +53,8 @@ function createRoom(timeLimit) {
   const code = randomUUID().slice(0, 8)
   rooms.set(code, {
     players: [],
-    seed: null, cells: [], avail: [], target: null,
-    turnMs: 0, running: false, shared: timeLimit || 60, found: 0, pid: 0, turnNum: 0,
+    seed: null, cells: [], avail: [],
+    running: false, shared: timeLimit || 60, found: 0,
     phase: 'waiting', timer: null, replay: [], timeLimit: timeLimit || 60,
   })
   return code
@@ -73,54 +69,59 @@ function broadcast(room, msg, excludeWs = null) {
   }
 }
 
+function pickTarget(room, forPlayerIndex) {
+  const s = room
+  if (s.avail.length === 0) return null
+  const other = s.players[1 - forPlayerIndex]
+  const otherTarget = other ? other.currentTarget : null
+  let pool = otherTarget !== null ? s.avail.filter(n => n !== otherTarget) : s.avail
+  if (pool.length === 0) pool = s.avail
+  const idx = Math.floor(Math.random() * pool.length)
+  return pool[idx]
+}
+
 function startGame(room) {
   const s = room
   s.phase = 'playing'
   s.seed = Math.random()
   const seedInt = Math.floor(s.seed * 2147483647)
   const rand = mulberry32(seedInt)
-  s.cells = generateCells(rand, SYMBOL_PACKS.numbers.count)
+  s.cells = generateCells(rand, 90)
   s.avail = s.cells.map(c => c.num)
   s.shared = s.timeLimit
-  s.pid = 0
-  s.found = 0
   s.running = false
-  s.turnMs = 0
-  s.turnNum = 0
   s.replay = []
-  for (const p of s.players) { p.finds = []; p.t = 0; p.skips = 0; p.errors = 0 }
+  for (const p of s.players) { p.finds = []; p.t = 0; p.skips = 0; p.errors = 0; p.currentTarget = null }
+
+  for (const p of s.players) {
+    p.currentTarget = pickTarget(room, s.players.indexOf(p))
+  }
 
   const playersInfo = s.players.map(p => ({ name: p.name }))
   const cellsData = s.cells.map(c => ({ num: c.num, site: c.site, vertices: c.vertices, found: false, fb: c.fb }))
   s.players.forEach((p, i) => {
     if (p.ws && p.ws.readyState === 1) {
       p.ws.send(JSON.stringify({
-        type: 'GAME_START', seed: s.seed, playerIndex: i, pid: i,
-        players: playersInfo, cells: cellsData, avail: s.avail, shared: s.shared, timeLimit: s.timeLimit,
+        type: 'GAME_START', seed: s.seed, playerIndex: i,
+        players: playersInfo, cells: cellsData, avail: s.avail,
+        shared: s.shared, timeLimit: s.timeLimit,
+        target: p.currentTarget,
       }))
     }
   })
-  startTurn(room)
-}
 
-function startTurn(room) {
-  const s = room
-  if (s.avail.length === 0) { endGame(room); return }
-  const seedInt = Math.floor((s.seed + ++s.turnNum) * 2147483647)
-  const rand = mulberry32(seedInt)
-  const idx = Math.floor(rand() * s.avail.length)
-  s.target = s.avail[idx]
-  s.turnMs = 0
-  s.running = false
-
-  const active = s.players[s.pid]
-  if (active.ws && active.ws.readyState === 1) {
-    active.ws.send(JSON.stringify({ type: 'TURN_START', target: s.target, pid: s.pid }))
-  }
-  const otherPid = s.pid === 0 ? 1 : 0
-  const other = s.players[otherPid]
-  if (other.ws && other.ws.readyState === 1) {
-    other.ws.send(JSON.stringify({ type: 'TURN_WAIT', player: s.pid }))
+  s.running = true
+  if (!s.timer) {
+    s.timer = setInterval(() => {
+      if (!s.running) return
+      s.shared--
+      broadcast(room, { type: 'TIMER_SYNC', remaining: s.shared })
+      if (s.shared <= 0) {
+        clearInterval(s.timer)
+        s.timer = null
+        endGame(room)
+      }
+    }, 1000)
   }
 }
 
@@ -152,28 +153,6 @@ function handleMessage(room, playerIndex, data) {
   const s = room
 
   switch (msg.type) {
-    case 'READY': {
-      if (s.running) return
-      s.running = true
-      const p = s.players[playerIndex]
-      if (p.ws && p.ws.readyState === 1) {
-        p.ws.send(JSON.stringify({ type: 'GO' }))
-      }
-      if (!s.timer) {
-        s.timer = setInterval(() => {
-          if (!s.running) return
-          s.shared--
-          broadcast(room, { type: 'TIMER_SYNC', remaining: s.shared })
-          if (s.running) s.turnMs += 1000
-          if (s.shared <= 0) {
-            clearInterval(s.timer)
-            s.timer = null
-            endGame(room)
-          }
-        }, 1000)
-      }
-      break
-    }
     case 'CLICK':
       handleClick(room, playerIndex, msg.x, msg.y)
       break
@@ -194,7 +173,8 @@ function handleMessage(room, playerIndex, data) {
 
 function handleClick(room, playerIndex, x, y) {
   const s = room
-  if (playerIndex !== s.pid || !s.running) return
+  const player = s.players[playerIndex]
+  if (!player) return
 
   let hitCell = null
   for (const cell of s.cells) {
@@ -204,44 +184,54 @@ function handleClick(room, playerIndex, x, y) {
       break
     }
   }
-
-  if (!hitCell || hitCell.num !== s.target) {
-    const active = s.players[s.pid]
-    active.errors = (active.errors || 0) + 1
-    if (active.ws && active.ws.readyState === 1) {
-      active.ws.send(JSON.stringify({ type: 'CELL_WRONG', x, y }))
-    }
+  if (!hitCell || hitCell.num !== player.currentTarget) {
+    player.errors = (player.errors || 0) + 1
+    if (player.ws && player.ws.readyState === 1)
+      player.ws.send(JSON.stringify({ type: 'CELL_WRONG', x, y }))
     return
   }
 
   hitCell.fb = playerIndex
-  const player = s.players[playerIndex]
-  player.finds = player.finds || []
-  player.finds.push({ num: hitCell.num, time: s.turnMs })
-  player.t = (player.t || 0) + s.turnMs
+  const elapsed = s.timeLimit - s.shared
+  player.finds.push({ num: hitCell.num, time: elapsed })
+  player.t = (player.t || 0) + elapsed
   s.found++
-
-  broadcast(room, { type: 'CELL_FOUND', num: hitCell.num, time: s.turnMs, playerIndex })
 
   s.avail = s.avail.filter(n => n !== hitCell.num)
 
+  const nextTarget = s.avail.length > 0 ? pickTarget(room, playerIndex) : null
+  player.currentTarget = nextTarget
+
+  broadcast(room, {
+    type: 'CELL_FOUND',
+    num: hitCell.num,
+    time: elapsed,
+    playerIndex,
+    nextTarget,
+  })
+
+  const otherPi = playerIndex === 0 ? 1 : 0
+  const other = s.players[otherPi]
+  if (other && other.currentTarget === hitCell.num) {
+    other.currentTarget = s.avail.length > 0 && s.players.length > 1 ? pickTarget(room, otherPi) : null
+    if (other.ws && other.ws.readyState === 1)
+      other.ws.send(JSON.stringify({ type: 'TARGET_UPDATE', target: other.currentTarget }))
+  }
+
   if (s.avail.length === 0) {
     endGame(room)
-  } else {
-    s.pid = s.pid === 0 ? 1 : 0
-    startTurn(room)
   }
 }
 
 function handleSkip(room, playerIndex) {
   const s = room
-  if (playerIndex !== s.pid) return
   const player = s.players[playerIndex]
-  if (player.skips >= 3) return
+  if (!player || player.skips >= 3) return
   player.skips++
   broadcast(room, { type: 'SKIP', playerIndex })
-  s.pid = s.pid === 0 ? 1 : 0
-  startTurn(room)
+  player.currentTarget = pickTarget(room, playerIndex)
+  if (player.ws && player.ws.readyState === 1)
+    player.ws.send(JSON.stringify({ type: 'TARGET_UPDATE', target: player.currentTarget }))
 }
 
 const server = http.createServer((req, res) => {
@@ -342,6 +332,7 @@ server.on('upgrade', (req, socket, head) => {
   wss.handleUpgrade(req, socket, head, (ws) => {
     const player = room.players[playerIndex]
     player.ws = ws
+    player.connected = true
     console.log(`[WS] Player ${playerIndex} connected to room ${code}`)
 
     ws.on('message', (data) => handleMessage(room, playerIndex, data.toString()))

@@ -49,7 +49,6 @@ export const pvpStats      = $('pvp-stats');
 export const pvpName       = [ $('pvp-name-0'), $('pvp-name-1') ];
 export const pvpFound      = [ $('pvp-found-0'), $('pvp-found-1') ];
 export const pvpSkips      = [ $('pvp-skips-0'), $('pvp-skips-1') ];
-export const pvpTime       = [ $('pvp-time-0'), $('pvp-time-1') ];
 export const pvpSide       = [ $('pvp-side-0'), $('pvp-side-1') ];
 export const winnerText    = $('winner-text');
 export const winnerSub     = $('winner-sub');
@@ -118,15 +117,30 @@ export function updateStats(G) {
   } else {
     for (let i = 0; i < 2; i++) {
       const p = G.players[i];
-      const isActive = G.pid === i && G.phase === 'playing';
+      const isActive = G.mode === 'online' ? G.phase === 'playing' : G.pid === i && G.phase === 'playing';
       const skipsLeft = maxSkips() - p.skips;
       pvpFound[i].textContent = String(p.finds.length);
-      pvpSkips[i].textContent = `${Math.max(0, skipsLeft)} / ${maxSkips()}`;
-      pvpTime[i].textContent = p.t.toFixed(1) + 's';
+      pvpSkips[i].textContent = `${Math.max(0, skipsLeft)}/${maxSkips()}`;
       pvpName[i].textContent = p.n;
       pvpSide[i].classList.toggle('active-turn', isActive);
+
+      const other = G.players[1 - i];
+      const diff = p.finds.length - other.finds.length;
+      const advEl = document.getElementById('pvp-adv-' + i);
+      if (diff > 0) {
+        advEl.textContent = '+' + diff;
+        advEl.style.display = '';
+      } else {
+        advEl.style.display = 'none';
+      }
+
       if (G.mode === 'online') {
         pvpSide[i].classList.toggle('is-p2', i !== G.selfId);
+        if (i === G.selfId) {
+          const skipsLeft = maxSkips() - p.skips;
+          hudSkipBtn.textContent = skipsLeft > 0 ? `Skip (${skipsLeft})` : 'Skip';
+          hudSkipBtn.style.display = skipsLeft > 0 ? 'inline-block' : 'none';
+        }
       } else {
         pvpSide[i].classList.toggle('is-p2', i === 1);
       }
